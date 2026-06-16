@@ -239,13 +239,19 @@
   .icon-btn.on{ color:var(--oro); border-color:rgba(235,200,120,.5); }
 
   .res-scroll{ flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; display:flex; flex-direction:column; gap:14px; padding:2px 2px 4px; }
-  .res-foto-wrap{ position:relative; width:100%; max-width:280px; aspect-ratio:3/4; margin:0 auto; border-radius:20px; overflow:hidden;
+  .res-foto-wrap{ position:relative; width:100%; max-width:248px; aspect-ratio:3/4; margin:0 auto; flex-shrink:0; border-radius:20px; overflow:hidden;
     border:1px solid var(--card-borde); box-shadow:0 22px 55px -32px #000, 0 0 30px -10px rgba(235,200,120,.3); }
-  .res-foto-wrap img{ width:100%; height:100%; object-fit:cover; filter:brightness(.82) contrast(1.06); }
+  .res-foto-wrap img{ width:100%; height:100%; object-fit:cover; filter:brightness(.5) contrast(1.05) saturate(.9); }
+  #res-canvas{ display:block; width:100%; height:100%; }
   .trazos-res{ position:absolute; inset:0; width:100%; height:100%; }
-  .trazos-res .traza-res{ fill:none; stroke:var(--oro); stroke-width:2; stroke-linecap:round;
+  /* croquis (silueta) de la mano */
+  .trazos-res .croquis{ fill:rgba(255,255,255,.03); stroke:rgba(255,255,255,.62); stroke-width:1.5; vector-effect:non-scaling-stroke;
+    stroke-linejoin:round; stroke-linecap:round; filter:drop-shadow(0 0 3px rgba(255,255,255,.45)); stroke-dasharray:100; stroke-dashoffset:100; }
+  .res-foto-wrap.dibujar .croquis{ animation:dibujarFijo 1.7s ease forwards; }
+  /* líneas de la palma (coloreadas por JS) */
+  .trazos-res .traza-res{ fill:none; stroke:var(--oro); stroke-width:2.6; vector-effect:non-scaling-stroke; stroke-linecap:round;
     filter:drop-shadow(0 0 4px var(--oro)); stroke-dasharray:100; stroke-dashoffset:100; }
-  .res-foto-wrap.dibujar .traza-res{ animation:dibujarFijo 1.5s ease forwards; }
+  .res-foto-wrap.dibujar .traza-res{ animation:dibujarFijo 1.4s ease forwards; }
   @keyframes dibujarFijo{ to{ stroke-dashoffset:0 } }
   .trazos-res .nodo-res{ fill:#fff; opacity:0; filter:drop-shadow(0 0 4px var(--oro)); }
   .res-foto-wrap.dibujar .nodo-res{ animation:apareceNodo .5s ease forwards; }
@@ -439,17 +445,7 @@
 
     <div class="res-scroll">
       <div class="res-foto-wrap" id="res-foto-wrap">
-        <img id="res-foto" alt="" />
-        <svg class="trazos-res" viewBox="0 0 100 133" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-          <path class="traza-res" pathLength="100" style="animation-delay:.1s"  d="M30 44 Q22 80 44 104"/>
-          <path class="traza-res" pathLength="100" style="animation-delay:.5s"  d="M24 56 Q50 46 80 52"/>
-          <path class="traza-res" pathLength="100" style="animation-delay:.9s"  d="M22 68 Q50 64 78 76"/>
-          <path class="traza-res" pathLength="100" style="animation-delay:1.3s" d="M58 104 Q54 66 50 40"/>
-          <circle class="nodo-res" cx="44" cy="104" r="2" style="animation-delay:.7s"/>
-          <circle class="nodo-res" cx="80" cy="52" r="2" style="animation-delay:1.1s"/>
-          <circle class="nodo-res" cx="78" cy="76" r="2" style="animation-delay:1.4s"/>
-          <circle class="nodo-res" cx="50" cy="40" r="2" style="animation-delay:1.7s"/>
-        </svg>
+        <canvas id="res-canvas"></canvas>
       </div>
       <div id="res-lineas"></div>
     </div>
@@ -758,7 +754,6 @@ $('#btn-aceptar').addEventListener('click', () => {
   renderResultado();
   mostrar('resultado');
   fondoMusica(true);   // música suave de fondo durante la lectura
-  requestAnimationFrame(() => $('#res-foto-wrap').classList.add('dibujar')); // dibuja las líneas
   if(!(estado.lectura && estado.lectura.error)){
     hablar(compilarPrediccion());
     if(lecturasDe(estado.correo) >= 3){ setTimeout(abrirRecibir, 5000); }
@@ -778,13 +773,11 @@ function fondoMusica(activar){
 function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function renderResultado(){
   const a = estado.lectura || {};
-  $('#res-foto').src = estado.dataUrl;
   $('#res-nombre').textContent = estado.nombre || 'Viajero';
   $('#chip-modo').textContent = MODOS_UI[estado.modo] || 'Oráculo';
   const n = Math.min(3, lecturasDe(estado.correo) || 1);
   const chipL = $('#chip-lectura'); chipL.textContent = 'Lectura ' + n + '/3'; chipL.className = 'chip lectura';
   $('#btn-tts').classList.toggle('on', estado.tts);
-  $('#res-foto-wrap').classList.remove('dibujar');
 
   const cont = $('#res-lineas'); cont.innerHTML = '';
   let delay = 0;
@@ -797,9 +790,7 @@ function renderResultado(){
     return;
   }
   if(a.saludo) add('<p class="res-saludo">“' + esc(a.saludo) + '”</p>', 'bloque');
-  const paths = document.querySelectorAll('#res-foto-wrap .traza-res');
-  const nodos = document.querySelectorAll('#res-foto-wrap .nodo-res');
-  (a.lineas || []).forEach((l, i) => {
+  (a.lineas || []).forEach((l) => {
     const color = PALETA[(l.color || '').toLowerCase()] || PALETA.dorado;
     const obs = l.observacion ? '<p class="obs">🔍 ' + esc(l.observacion) + '</p>' : '';
     const d = document.createElement('div');
@@ -807,16 +798,89 @@ function renderResultado(){
     d.style.borderLeft = '3px solid ' + color;
     d.innerHTML = '<h3 style="color:' + color + '"><span class="ico">' + esc(l.simbolo || '✦') + '</span> ' + esc(l.nombre || '') + '</h3>' + obs + '<p>' + esc(l.lectura || '') + '</p>';
     cont.appendChild(d);
-    // Colorea el trazo y el nodo correspondientes sobre la mano.
-    if(paths[i]){ paths[i].style.stroke = color; paths[i].style.filter = 'drop-shadow(0 0 4px ' + color + ')'; }
-    if(nodos[i]){ nodos[i].style.fill = color; nodos[i].style.filter = 'drop-shadow(0 0 4px ' + color + ')'; }
   });
   if(!(a.lineas && a.lineas.length)){
     add('<p>No se distinguieron bien las líneas. Toca ↺ y repite la foto con buena luz y la palma bien abierta.</p>');
   }
   if(a.montes) add('<h3><span class="ico">⛰️</span> Montes y forma de la mano</h3><p>' + esc(a.montes) + '</p>');
   if(a.cierre) add('<p class="res-cierre">' + esc(a.cierre) + '</p>', 'bloque');
+
+  // Dibuja en el canvas: foto atenuada + croquis de la mano + líneas en su color.
+  dibujarManoCanvas(estado.dataUrl, a.lineas || []);
 }
+
+/* ====================== CANVAS: croquis de la mano + líneas ====================== */
+const SVGNS = 'http://www.w3.org/2000/svg';
+const CROQUIS_D = "M33 120 L30 96 C28 86 18 80 14 73 C10 68 13 63 19 63 C25 63 31 66 31 60 L31 31 Q31 26 36 26 Q41 26 41 31 L41 57 Q43 60 45 57 L45 21 Q45 16 50 16 Q55 16 55 21 L55 56 Q57 59 59 56 L59 25 Q59 20 64 20 Q68 20 68 25 L68 58 Q70 61 71 58 L71 40 Q71 35 76 35 Q80 35 80 41 L78 96 L74 120 Z";
+const LINEAS_D = [
+  "M41 60 Q30 86 43 113",  // vida
+  "M34 73 Q52 66 70 71",   // corazón
+  "M33 83 Q52 81 67 89",   // cabeza
+  "M54 116 Q52 88 50 64"   // destino
+];
+let _tempSvg = null, _animToken = 0;
+function _svg(){ if(!_tempSvg){ _tempSvg = document.createElementNS(SVGNS,'svg'); _tempSvg.setAttribute('viewBox','0 0 100 133'); _tempSvg.style.cssText='position:absolute;left:-9999px;width:10px;height:10px;overflow:hidden'; document.body.appendChild(_tempSvg); } return _tempSvg; }
+function muestrear(d, n){
+  const sv = _svg(); const p = document.createElementNS(SVGNS,'path'); p.setAttribute('d', d); sv.appendChild(p);
+  let L = 0; try{ L = p.getTotalLength(); }catch(e){}
+  const pts = [];
+  for(let i=0;i<=n;i++){ try{ const q = p.getPointAtLength(L*i/n); pts.push([q.x, q.y]); }catch(e){ pts.push([50,66]); } }
+  sv.removeChild(p); return pts;
+}
+function _coverDims(iw, ih, W, H){ const ir=iw/ih, cr=W/H; return ir>cr ? {dw:H*ir,dh:H,dx:(W-H*ir)/2,dy:0} : {dw:W,dh:W/ir,dx:0,dy:(H-W/ir)/2}; }
+function _trazar(ctx, pts, sx, sy, color, w, f, glow){
+  if(f<=0) return;
+  const k = Math.max(1, Math.floor(f*(pts.length-1)));
+  ctx.save();
+  ctx.lineWidth = w*sx; ctx.strokeStyle = color; ctx.lineJoin='round'; ctx.lineCap='round';
+  if(glow){ ctx.shadowColor = color; ctx.shadowBlur = 7*sx; }
+  ctx.beginPath(); ctx.moveTo(pts[0][0]*sx, pts[0][1]*sy);
+  for(let i=1;i<=k;i++) ctx.lineTo(pts[i][0]*sx, pts[i][1]*sy);
+  ctx.stroke(); ctx.restore();
+}
+function dibujarManoCanvas(dataUrl, lineas){
+  const cv = $('#res-canvas'); if(!cv) return;
+  const token = ++_animToken;
+  const colores = (lineas||[]).map(l => PALETA[(l.color||'').toLowerCase()] || PALETA.dorado);
+  const croPts = muestrear(CROQUIS_D, 170);
+  const linPts = LINEAS_D.map(d => muestrear(d, 90));
+  const img = new Image();
+  img.onload = () => { if(token===_animToken) correr(img); };
+  img.onerror = () => { if(token===_animToken) correr(null); };
+  img.src = dataUrl || '';
+  if(!dataUrl) correr(null);
+
+  function correr(img){
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const cssW = cv.clientWidth || 248, cssH = cv.clientHeight || Math.round(cssW*133/100);
+    cv.width = Math.round(cssW*dpr); cv.height = Math.round(cssH*dpr);
+    const ctx = cv.getContext('2d');
+    const sx = cv.width/100, sy = cv.height/133;
+    let cover = img ? _coverDims(img.width, img.height, cv.width, cv.height) : null;
+    const inicio = performance.now();
+    const T_CRO = 1100, GAP = 320, T_LIN = 520;
+    const total = T_CRO + Math.max(0,(linPts.length-1))*GAP + T_LIN + 250;
+    function frame(now){
+      if(token !== _animToken) return;
+      const t = now - inicio;
+      ctx.clearRect(0,0,cv.width,cv.height);
+      if(img && cover) ctx.drawImage(img, cover.dx, cover.dy, cover.dw, cover.dh);
+      else { ctx.fillStyle = '#14143c'; ctx.fillRect(0,0,cv.width,cv.height); }
+      ctx.fillStyle = 'rgba(8,8,40,0.5)'; ctx.fillRect(0,0,cv.width,cv.height);   // atenúa la foto
+      _trazar(ctx, croPts, sx, sy, 'rgba(255,255,255,0.7)', 1.5, clamp01(t/T_CRO), false);
+      linPts.forEach((pts, i) => {
+        const f = clamp01((t - (T_CRO + i*GAP)) / T_LIN);
+        _trazar(ctx, pts, sx, sy, colores[i] || '#EBC878', 2.4, f, true);
+        if(f >= 1){ const e = pts[pts.length-1];
+          ctx.save(); ctx.fillStyle = '#fff'; ctx.shadowColor = colores[i] || '#fff'; ctx.shadowBlur = 7*sx;
+          ctx.beginPath(); ctx.arc(e[0]*sx, e[1]*sy, 2.1*sx, 0, 7); ctx.fill(); ctx.restore(); }
+      });
+      if(t < total) requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  }
+}
+function clamp01(x){ return x < 0 ? 0 : x > 1 ? 1 : x; }
 
 /* ====================== NUEVA LECTURA ====================== */
 function nuevaLectura(){
