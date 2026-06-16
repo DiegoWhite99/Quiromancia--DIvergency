@@ -492,6 +492,22 @@
   </div>
 </div>
 
+<!-- OpenCV.js (visión por computadora: detecta el contorno real de la mano) -->
+<script async src="https://docs.opencv.org/4.x/opencv.js" id="opencvjs"></script>
+<script>
+  (function(){
+    const el = document.getElementById('opencvjs');
+    function marcar(){
+      try{
+        if(window.cv && typeof window.cv.then === 'function'){ window.cv.then(m => { window.cv = m; window.cvListo = true; }); }
+        else if(window.cv && window.cv.Mat){ window.cvListo = true; }
+        else if(window.cv){ window.cv.onRuntimeInitialized = () => { window.cvListo = true; }; }
+      }catch(e){}
+    }
+    el.addEventListener('load', marcar);
+  })();
+</script>
+
 <!-- Firebase (Auth con Google) -->
 <script type="module">
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js';
@@ -799,9 +815,6 @@ function renderResultado(){
     d.innerHTML = '<h3 style="color:' + color + '"><span class="ico">' + esc(l.simbolo || '✦') + '</span> ' + esc(l.nombre || '') + '</h3>' + obs + '<p>' + esc(l.lectura || '') + '</p>';
     cont.appendChild(d);
   });
-  if(!(a.lineas && a.lineas.length)){
-    add('<p>No se distinguieron bien las líneas. Toca ↺ y repite la foto con buena luz y la palma bien abierta.</p>');
-  }
   if(a.montes) add('<h3><span class="ico">⛰️</span> Montes y forma de la mano</h3><p>' + esc(a.montes) + '</p>');
   if(a.cierre) add('<p class="res-cierre">' + esc(a.cierre) + '</p>', 'bloque');
 
@@ -809,15 +822,11 @@ function renderResultado(){
   dibujarManoCanvas(estado.dataUrl, a.lineas || []);
 }
 
-/* ====================== CANVAS: croquis de la mano + líneas ====================== */
+/* ====================== CANVAS: croquis (visión por computadora) + líneas ====================== */
 const SVGNS = 'http://www.w3.org/2000/svg';
+// Croquis y líneas de RESPALDO (si OpenCV no está listo o no detecta mano), en espacio 100x133.
 const CROQUIS_D = "M33 120 L30 96 C28 86 18 80 14 73 C10 68 13 63 19 63 C25 63 31 66 31 60 L31 31 Q31 26 36 26 Q41 26 41 31 L41 57 Q43 60 45 57 L45 21 Q45 16 50 16 Q55 16 55 21 L55 56 Q57 59 59 56 L59 25 Q59 20 64 20 Q68 20 68 25 L68 58 Q70 61 71 58 L71 40 Q71 35 76 35 Q80 35 80 41 L78 96 L74 120 Z";
-const LINEAS_D = [
-  "M41 60 Q30 86 43 113",  // vida
-  "M34 73 Q52 66 70 71",   // corazón
-  "M33 83 Q52 81 67 89",   // cabeza
-  "M54 116 Q52 88 50 64"   // destino
-];
+const LINEAS_D = ["M41 60 Q30 86 43 113","M34 73 Q52 66 70 71","M33 83 Q52 81 67 89","M54 116 Q52 88 50 64"];
 let _tempSvg = null, _animToken = 0;
 function _svg(){ if(!_tempSvg){ _tempSvg = document.createElementNS(SVGNS,'svg'); _tempSvg.setAttribute('viewBox','0 0 100 133'); _tempSvg.style.cssText='position:absolute;left:-9999px;width:10px;height:10px;overflow:hidden'; document.body.appendChild(_tempSvg); } return _tempSvg; }
 function muestrear(d, n){
@@ -828,59 +837,118 @@ function muestrear(d, n){
   sv.removeChild(p); return pts;
 }
 function _coverDims(iw, ih, W, H){ const ir=iw/ih, cr=W/H; return ir>cr ? {dw:H*ir,dh:H,dx:(W-H*ir)/2,dy:0} : {dw:W,dh:W/ir,dx:0,dy:(H-W/ir)/2}; }
-function _trazar(ctx, pts, sx, sy, color, w, f, glow){
-  if(f<=0) return;
+function clamp01(x){ return x < 0 ? 0 : x > 1 ? 1 : x; }
+function _quad(p0,p1,p2,n){ const a=[]; for(let i=0;i<=n;i++){ const t=i/n,u=1-t; a.push([u*u*p0[0]+2*u*t*p1[0]+t*t*p2[0], u*u*p0[1]+2*u*t*p1[1]+t*t*p2[1]]); } return a; }
+function _trazarPx(ctx, pts, color, w, f, glow){
+  if(f<=0 || !pts || pts.length<2) return;
   const k = Math.max(1, Math.floor(f*(pts.length-1)));
   ctx.save();
-  ctx.lineWidth = w*sx; ctx.strokeStyle = color; ctx.lineJoin='round'; ctx.lineCap='round';
-  if(glow){ ctx.shadowColor = color; ctx.shadowBlur = 7*sx; }
-  ctx.beginPath(); ctx.moveTo(pts[0][0]*sx, pts[0][1]*sy);
-  for(let i=1;i<=k;i++) ctx.lineTo(pts[i][0]*sx, pts[i][1]*sy);
+  ctx.lineWidth = w; ctx.strokeStyle = color; ctx.lineJoin='round'; ctx.lineCap='round';
+  if(glow){ ctx.shadowColor = color; ctx.shadowBlur = w*3; }
+  ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]);
+  for(let i=1;i<=k;i++) ctx.lineTo(pts[i][0], pts[i][1]);
   ctx.stroke(); ctx.restore();
 }
+
+// Visión por computadora: detecta el contorno de la mano por color de piel (YCrCb).
+// Devuelve { contorno:[[x,y]...], rect:{x,y,w,h}, imgW, imgH } en píxeles de la imagen, o null.
+function analizarMano(imgEl){
+  if(!window.cvListo || !(window.cv && window.cv.Mat)) return null;
+  const cv = window.cv;
+  let src=null, small=null, ycrcb=null, mask=null, kernel=null, contours=null, hier=null;
+  try{
+    src = cv.imread(imgEl);
+    const W0=src.cols, H0=src.rows;
+    const scale = Math.min(1, 420/Math.max(W0,H0));
+    small = new cv.Mat(); cv.resize(src, small, new cv.Size(Math.max(1,Math.round(W0*scale)), Math.max(1,Math.round(H0*scale))));
+    ycrcb = new cv.Mat(); cv.cvtColor(small, ycrcb, cv.COLOR_RGB2YCrCb);
+    mask = new cv.Mat();
+    const lo = new cv.Mat(small.rows, small.cols, ycrcb.type(), [0,135,85,0]);
+    const hi = new cv.Mat(small.rows, small.cols, ycrcb.type(), [255,180,135,255]);
+    cv.inRange(ycrcb, lo, hi, mask); lo.delete(); hi.delete();
+    kernel = cv.Mat.ones(5,5,cv.CV_8U);
+    cv.morphologyEx(mask, mask, cv.MORPH_OPEN, kernel);
+    cv.morphologyEx(mask, mask, cv.MORPH_CLOSE, kernel);
+    contours = new cv.MatVector(); hier = new cv.Mat();
+    cv.findContours(mask, contours, hier, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+    let bi=-1, ba=0;
+    for(let i=0;i<contours.size();i++){ const a=cv.contourArea(contours.get(i)); if(a>ba){ ba=a; bi=i; } }
+    const area = small.rows*small.cols;
+    if(bi<0 || ba < area*0.06) return null;
+    const cnt = contours.get(bi);
+    const approx = new cv.Mat(); cv.approxPolyDP(cnt, approx, 2, true);
+    const inv = 1/scale, pts=[];
+    for(let i=0;i<approx.data32S.length;i+=2) pts.push([approx.data32S[i]*inv, approx.data32S[i+1]*inv]);
+    approx.delete();
+    const r = cv.boundingRect(cnt);
+    return { contorno: pts, rect:{ x:r.x*inv, y:r.y*inv, w:r.width*inv, h:r.height*inv }, imgW:W0, imgH:H0 };
+  }catch(e){ return null; }
+  finally{ [src,small,ycrcb,mask,kernel,hier].forEach(m=>{ try{ m && m.delete && m.delete(); }catch(e){} }); try{ contours && contours.delete(); }catch(e){} }
+}
+
+// Líneas de la palma ubicadas dentro del bounding box de la mano detectada (px de imagen).
+function lineasEnRect(rect){
+  const X=f=>rect.x+f*rect.w, Y=f=>rect.y+f*rect.h;
+  return [
+    _quad([X(.32),Y(.42)],[X(.13),Y(.72)],[X(.34),Y(.98)],40), // vida (curva del pulgar)
+    _quad([X(.14),Y(.44)],[X(.5),Y(.32)],[X(.9),Y(.42)],40),   // corazón (superior)
+    _quad([X(.16),Y(.58)],[X(.5),Y(.54)],[X(.86),Y(.64)],40),  // cabeza (media)
+    _quad([X(.56),Y(.99)],[X(.52),Y(.62)],[X(.5),Y(.34)],40)   // destino (vertical)
+  ];
+}
+
 function dibujarManoCanvas(dataUrl, lineas){
   const cv = $('#res-canvas'); if(!cv) return;
   const token = ++_animToken;
   const colores = (lineas||[]).map(l => PALETA[(l.color||'').toLowerCase()] || PALETA.dorado);
-  const croPts = muestrear(CROQUIS_D, 170);
-  const linPts = LINEAS_D.map(d => muestrear(d, 90));
   const img = new Image();
-  img.onload = () => { if(token===_animToken) correr(img); };
-  img.onerror = () => { if(token===_animToken) correr(null); };
+  img.onload = () => { if(token===_animToken) preparar(img); };
+  img.onerror = () => { if(token===_animToken) preparar(null); };
   img.src = dataUrl || '';
-  if(!dataUrl) correr(null);
+  if(!dataUrl) preparar(null);
 
-  function correr(img){
+  function preparar(img){
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const cssW = cv.clientWidth || 248, cssH = cv.clientHeight || Math.round(cssW*133/100);
     cv.width = Math.round(cssW*dpr); cv.height = Math.round(cssH*dpr);
     const ctx = cv.getContext('2d');
-    const sx = cv.width/100, sy = cv.height/133;
-    let cover = img ? _coverDims(img.width, img.height, cv.width, cv.height) : null;
-    const inicio = performance.now();
-    const T_CRO = 1100, GAP = 320, T_LIN = 520;
-    const total = T_CRO + Math.max(0,(linPts.length-1))*GAP + T_LIN + 250;
+    const W = cv.width, H = cv.height;
+    const cover = img ? _coverDims(img.width, img.height, W, H) : null;
+
+    let croPts, linPts;
+    const det = img ? analizarMano(img) : null;
+    if(det && cover){
+      const mp = p => [ cover.dx + p[0]*(cover.dw/det.imgW), cover.dy + p[1]*(cover.dh/det.imgH) ];
+      croPts = det.contorno.map(mp); if(croPts.length) croPts.push(croPts[0]);
+      linPts = lineasEnRect(det.rect).map(arr => arr.map(mp));
+    } else {
+      const sx = W/100, sy = H/133;
+      croPts = muestrear(CROQUIS_D,170).map(p=>[p[0]*sx, p[1]*sy]);
+      linPts = LINEAS_D.map(d => muestrear(d,90).map(p=>[p[0]*sx, p[1]*sy]));
+    }
+    const wCro = Math.max(1.5, W*0.005), wLin = Math.max(2, W*0.011);
+    const inicio = performance.now(), T_CRO=1100, GAP=320, T_LIN=520;
+    const total = T_CRO + Math.max(0,linPts.length-1)*GAP + T_LIN + 250;
     function frame(now){
       if(token !== _animToken) return;
       const t = now - inicio;
-      ctx.clearRect(0,0,cv.width,cv.height);
+      ctx.clearRect(0,0,W,H);
       if(img && cover) ctx.drawImage(img, cover.dx, cover.dy, cover.dw, cover.dh);
-      else { ctx.fillStyle = '#14143c'; ctx.fillRect(0,0,cv.width,cv.height); }
-      ctx.fillStyle = 'rgba(8,8,40,0.5)'; ctx.fillRect(0,0,cv.width,cv.height);   // atenúa la foto
-      _trazar(ctx, croPts, sx, sy, 'rgba(255,255,255,0.7)', 1.5, clamp01(t/T_CRO), false);
+      else { ctx.fillStyle='#14143c'; ctx.fillRect(0,0,W,H); }
+      ctx.fillStyle='rgba(8,8,40,0.5)'; ctx.fillRect(0,0,W,H);   // atenúa la foto
+      _trazarPx(ctx, croPts, 'rgba(255,255,255,0.72)', wCro, clamp01(t/T_CRO), false);
       linPts.forEach((pts, i) => {
         const f = clamp01((t - (T_CRO + i*GAP)) / T_LIN);
-        _trazar(ctx, pts, sx, sy, colores[i] || '#EBC878', 2.4, f, true);
-        if(f >= 1){ const e = pts[pts.length-1];
-          ctx.save(); ctx.fillStyle = '#fff'; ctx.shadowColor = colores[i] || '#fff'; ctx.shadowBlur = 7*sx;
-          ctx.beginPath(); ctx.arc(e[0]*sx, e[1]*sy, 2.1*sx, 0, 7); ctx.fill(); ctx.restore(); }
+        _trazarPx(ctx, pts, colores[i] || '#EBC878', wLin, f, true);
+        if(f >= 1 && pts.length){ const e = pts[pts.length-1];
+          ctx.save(); ctx.fillStyle='#fff'; ctx.shadowColor=colores[i]||'#fff'; ctx.shadowBlur=wLin*3;
+          ctx.beginPath(); ctx.arc(e[0], e[1], wLin*0.9, 0, 7); ctx.fill(); ctx.restore(); }
       });
       if(t < total) requestAnimationFrame(frame);
     }
     requestAnimationFrame(frame);
   }
 }
-function clamp01(x){ return x < 0 ? 0 : x > 1 ? 1 : x; }
 
 /* ====================== NUEVA LECTURA ====================== */
 function nuevaLectura(){

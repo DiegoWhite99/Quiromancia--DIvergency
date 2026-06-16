@@ -33,7 +33,7 @@ Reglas:
 - Enfócate EXCLUSIVAMENTE en la QUIROMANCIA: las líneas, los montes y la forma de la mano. NO uses astrología, signos zodiacales ni horóscopos.
 - Para CADA línea, primero OBSERVA cómo se ve realmente en ESTA palma (su largo, profundidad, nitidez, si es curva o recta, cadenas, islas, ramas, cortes o cruces) y descríbelo en "observacion"; LUEGO, en "lectura", da una interpretación rica y concreta basada en esa observación.
 - Las lecturas deben ser GENEROSAS y detalladas: de 4 a 6 frases por línea, directas y afirmativas, en segunda persona. Ejemplo del nivel esperado: "Tu línea de la vida es larga, profunda y bien trazada, lo que revela una enorme vitalidad y energía; vas a tener una vida larga y plena, con la fuerza para superar cualquier obstáculo y disfrutar de muchos años hermosos rodeada de quienes amas." NUNCA frases vagas ni de una sola oración.
-- Cubre las CUATRO líneas mayores (vida, corazón, cabeza, destino) y comenta además los montes y la forma de la mano y los dedos.
+- Devuelve SIEMPRE las CUATRO líneas mayores (vida, corazón, cabeza, destino), cada una con su lectura propia y DISTINTA de las demás; nunca dejes el arreglo vacío. Comenta además los montes y la forma de la mano y los dedos. Si la foto no es perfecta, haz tu mejor interpretación igualmente.
 - A cada línea asígnale un "color" según el significado DOMINANTE de lo que revela, eligiendo SOLO uno de estos: "verde" (vida, vitalidad, salud), "azul" (riqueza, prosperidad, abundancia, mente), "rosa" (amor, afectos), "dorado" (destino, éxito, fortuna), "morado" (intuición, espiritualidad) o "rojo" (advertencias o aspectos difíciles). Normalmente: Vida→verde, Corazón→rosa, Cabeza→azul, Destino→dorado; usa "rojo" solo si esa línea muestra algo que conviene cuidar.
 - Tono positivo e inspirador (respetando tu personalidad). Es para entretenimiento y autorreflexión: sin consejos médicos, legales o financieros, ni fechas exactas.
 - Responde EXCLUSIVAMENTE con un objeto JSON válido (sin markdown ni texto extra), con EXACTAMENTE esta forma:
@@ -47,8 +47,7 @@ Reglas:
   ],
   "montes": "1 párrafo (3-5 frases) sobre los montes (Venus, Júpiter, Apolo, etc.) y la forma de la mano y los dedos",
   "cierre": "2-3 frases de cierre inspirador, en tu estilo"
-}
-- Si la imagen NO muestra con claridad una palma humana, indícalo en "saludo" (con tu estilo) y devuelve "lineas" como arreglo vacío.`;
+}`;
 }
 
 const apiKey = () => process.env.OPENAI_API_KEY;
