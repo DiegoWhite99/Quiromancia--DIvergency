@@ -255,6 +255,7 @@
   .bloque h3{ font-size:18px; margin:0 0 7px; display:flex; align-items:center; gap:9px; color:var(--texto); }
   .bloque h3 .ico{ font-size:21px; }
   .bloque p{ margin:0; font-size:15.5px; line-height:1.62; color:#ddddf5; }
+  .bloque .obs{ margin:0 0 9px; font-size:13.5px; font-style:italic; color:var(--texto-mute); line-height:1.5; }
   .res-cierre{ text-align:center; font-style:italic; color:var(--oro-suave); font-size:15.5px; line-height:1.6; padding:4px 8px; }
   .res-actions{ display:flex; gap:12px; }
 
@@ -528,6 +529,8 @@
    ============================================================ */
 
 const MODOS_UI = { serio:'Modo Serio', mistico:'Oráculo de Delfos', burlon:'Modo Burlón' };
+// Color por significado de la línea
+const PALETA = { verde:'#54E08A', azul:'#5B9BFF', rosa:'#FF6FB5', dorado:'#EBC878', morado:'#B083FF', rojo:'#FF6B6B' };
 
 const estado = {
   modo:'mistico', nombre:'', correo:'', cel:'', mano:'derecha', fecha:'', anio:'', tema:'', signo:'', flipManual:false, mirror:false,
@@ -794,12 +797,24 @@ function renderResultado(){
     return;
   }
   if(a.saludo) add('<p class="res-saludo">“' + esc(a.saludo) + '”</p>', 'bloque');
-  (a.lineas || []).forEach(l => {
-    add('<h3><span class="ico">' + esc(l.simbolo || '✦') + '</span> ' + esc(l.nombre || '') + '</h3><p>' + esc(l.lectura || '') + '</p>');
+  const paths = document.querySelectorAll('#res-foto-wrap .traza-res');
+  const nodos = document.querySelectorAll('#res-foto-wrap .nodo-res');
+  (a.lineas || []).forEach((l, i) => {
+    const color = PALETA[(l.color || '').toLowerCase()] || PALETA.dorado;
+    const obs = l.observacion ? '<p class="obs">🔍 ' + esc(l.observacion) + '</p>' : '';
+    const d = document.createElement('div');
+    d.className = 'glass bloque'; d.style.animationDelay = delay + 'ms'; delay += 120;
+    d.style.borderLeft = '3px solid ' + color;
+    d.innerHTML = '<h3 style="color:' + color + '"><span class="ico">' + esc(l.simbolo || '✦') + '</span> ' + esc(l.nombre || '') + '</h3>' + obs + '<p>' + esc(l.lectura || '') + '</p>';
+    cont.appendChild(d);
+    // Colorea el trazo y el nodo correspondientes sobre la mano.
+    if(paths[i]){ paths[i].style.stroke = color; paths[i].style.filter = 'drop-shadow(0 0 4px ' + color + ')'; }
+    if(nodos[i]){ nodos[i].style.fill = color; nodos[i].style.filter = 'drop-shadow(0 0 4px ' + color + ')'; }
   });
   if(!(a.lineas && a.lineas.length)){
     add('<p>No se distinguieron bien las líneas. Toca ↺ y repite la foto con buena luz y la palma bien abierta.</p>');
   }
+  if(a.montes) add('<h3><span class="ico">⛰️</span> Montes y forma de la mano</h3><p>' + esc(a.montes) + '</p>');
   if(a.cierre) add('<p class="res-cierre">' + esc(a.cierre) + '</p>', 'bloque');
 }
 
@@ -818,9 +833,15 @@ $('#btn-reiniciar2').addEventListener('click', nuevaLectura);
 function compilarPrediccion(){
   const a = estado.lectura || {}; const partes = [];
   if(a.saludo) partes.push(a.saludo);
-  (a.lineas || []).forEach(l => partes.push((l.nombre ? l.nombre + ': ' : '') + (l.lectura || '')));
+  (a.lineas || []).forEach(l => {
+    let t = (l.nombre ? l.nombre + '. ' : '');
+    if(l.observacion) t += l.observacion + ' ';
+    t += (l.lectura || '');
+    partes.push(t);
+  });
+  if(a.montes) partes.push('Montes y forma de la mano. ' + a.montes);
   if(a.cierre) partes.push(a.cierre);
-  return partes.join('. ');
+  return partes.join('\n\n');
 }
 function abrirRecibir(){ $('#recibir-estado').textContent=''; $('#modal-recibir').classList.add('activo'); }
 $('#btn-recibir').addEventListener('click', abrirRecibir);
