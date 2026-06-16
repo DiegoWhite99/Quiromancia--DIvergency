@@ -1,0 +1,11 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Todos los datos (leads, predicciones) se escriben/leen SOLO desde las
+    // Cloud Functions con el Admin SDK, que omite estas reglas.
+    // Los clientes (navegador) no tienen acceso directo a la base de datos.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
