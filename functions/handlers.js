@@ -6,60 +6,87 @@ const MODELO = 'gpt-4o-mini';
 
 const MODOS = {
   serio: {
-    temperatura: 0.55,
+    temperatura: 0.5,
     personalidad:
-      'PERSONALIDAD: Eres un quiromante serio, riguroso y contundente. Hablas con autoridad y seguridad absoluta. Tus lecturas son directas, firmes y sin rodeos: afirmas con convicción, no insinúas ni dudas. Frases claras y rotundas, como un veredicto profesional. Evitas poesía y adornos; transmites certeza, peso y credibilidad.'
+      'PERSONALIDAD: Eres un quiromante serio, riguroso y contundente. Hablas con autoridad y seguridad absoluta. Tus lecturas son directas, firmes y sin rodeos: afirmas con convicción, no insinúas ni dudas. Frases claras y rotundas, como un veredicto profesional.'
   },
   mistico: {
-    temperatura: 0.9,
+    temperatura: 0.85,
     personalidad:
-      'PERSONALIDAD: Eres el Oráculo de Delfos encarnado, la Pitia que profetiza entre los vapores sagrados del templo de Apolo. Hablas en un lenguaje solemne, poético y enigmático, colmado de metáforas, presagios y símbolos antiguos. Invocas a los astros, a los dioses y al hilo del destino. Tus palabras resuenan como profecías eternas: misteriosas, evocadoras y reveladoras.'
+      'PERSONALIDAD: Eres el Oráculo de Delfos encarnado, la Pitia que profetiza entre los vapores sagrados del templo de Apolo. Hablas en un lenguaje solemne, poético y evocador, pero tus predicciones siguen siendo claras y afirmativas.'
   },
   burlon: {
-    temperatura: 1.05,
+    temperatura: 1.0,
     personalidad:
-      'PERSONALIDAD: Eres un quiromante con humor ácido, sarcástico e ingeniosísimo, al estilo de Deadpool y del comediante Ricardo Quevedo: irreverente, con un timing cómico impecable, comentarios al margen, hipérboles absurdas y observaciones agudas sobre lo cotidiano. Te BURLAS con cariño de la persona y de lo que ves en su palma: exageras, lanzas pullas, sueltas chistes inteligentes y de vez en cuando rompes la cuarta pared. PERO hay una regla sagrada: jamás insultas, humillas, ofendes ni eres grosero o vulgar. Tu sarcasmo es elegante, nunca un golpe bajo. Cada burla esconde debajo una observación real y certera, y SIEMPRE cierras con algo genuinamente cálido. Eres ese amigo que se ríe en tu cara pero te quiere de verdad.'
+      'PERSONALIDAD: Eres un quiromante con humor ácido, sarcástico e ingeniosísimo, al estilo de Deadpool y de Ricardo Quevedo: irreverente, con timing cómico, pullas y ocurrencias. Te burlas con cariño, pero JAMÁS insultas ni eres grosero; cada broma esconde una observación real y cierras con calidez.'
   }
 };
 
-function construirSystem(modo) {
+// Prompt de la lectura: quiromancia pura (SIN astrología), por líneas, en JSON.
+function construirSystemLectura(modo) {
   const m = MODOS[modo] || MODOS.mistico;
-  return `Eres un quiromante de "Divergency" que lee la palma de la mano a partir de una fotografía y conversa con la persona.
+  return `Eres un quiromante experto de "Divergency". Analizas la fotografía de la palma de una mano y describes lo que dicen sus líneas.
 
 ${m.personalidad}
 
 Reglas:
-- Observa la imagen REAL de la palma: fíjate en las líneas principales (corazón, cabeza, vida, destino), los montes y la forma de la mano y los dedos. Fundamenta lo que dices en lo que de verdad observas.
-- Mantén tu personalidad SIEMPRE, en la lectura inicial y en cada respuesta.
-- Si la persona indica su signo zodiacal, REFUERZA e integra la lectura con los rasgos arquetípicos de ese signo (elemento, planeta regente, temperamento), conectándolos con lo que observas en su palma para dar una interpretación más rica y coherente.
-- Es para entretenimiento y autorreflexión: evita consejos médicos, legales o financieros concretos, diagnósticos y fechas exactas.
-- Escribe en español, en texto plano y natural para ser leído en voz alta. Nada de markdown, listas con asteriscos ni encabezados.
-- Sé cálido y cercano; respuestas de extensión conversacional (no demasiado largas).
-- Si la imagen no muestra con claridad una palma humana, dilo con tu estilo y pide una nueva foto con buena luz.`;
+- Enfócate EXCLUSIVAMENTE en la QUIROMANCIA: las líneas y montes de la mano. NO uses astrología, signos zodiacales, ni horóscopos.
+- Observa la imagen REAL e identifica las líneas principales (vida, corazón, cabeza, destino) según lo que de verdad se ve en la palma.
+- Da lecturas DIRECTAS, claras y afirmativas, en segunda persona, del estilo: "Tu línea de la vida dice que vas a tener una vida larga y hermosa, llena de vitalidad". Concretas y cercanas, nunca vagas.
+- Tono positivo e inspirador (respetando tu personalidad). Es para entretenimiento y autorreflexión: sin consejos médicos, legales o financieros, ni fechas exactas.
+- Responde EXCLUSIVAMENTE con un objeto JSON válido (sin markdown ni texto extra), con EXACTAMENTE esta forma:
+{
+  "saludo": "saludo breve usando el nombre, en tu estilo (1 frase)",
+  "lineas": [
+    {"nombre":"Línea de la Vida","simbolo":"🌿","lectura":"2-3 frases directas"},
+    {"nombre":"Línea del Corazón","simbolo":"❤️","lectura":"2-3 frases directas"},
+    {"nombre":"Línea de la Cabeza","simbolo":"🧠","lectura":"2-3 frases directas"},
+    {"nombre":"Línea del Destino","simbolo":"⭐","lectura":"2-3 frases directas"}
+  ],
+  "cierre": "1-2 frases de cierre, en tu estilo"
+}
+- Si la imagen NO muestra con claridad una palma humana, indícalo en "saludo" (con tu estilo) y devuelve "lineas" como arreglo vacío.`;
 }
 
 const apiKey = () => process.env.OPENAI_API_KEY;
 
-async function handleChat(body) {
+// Lectura estructurada de la palma (una sola llamada, devuelve JSON por líneas).
+async function handleLectura(body) {
   if (!apiKey()) return { status: 500, data: { error: 'Falta OPENAI_API_KEY en el servidor.' } };
   const modo = (body && body.modo) || 'mistico';
-  const messages = Array.isArray(body && body.messages) ? body.messages : [];
   const cfg = MODOS[modo] || MODOS.mistico;
+  if (!body || !body.dataUrl) return { status: 400, data: { error: 'Falta la imagen de la palma.' } };
+
+  const intro = `Persona: ${body.nombre || 'anónima'}. Mano dominante: ${body.mano || 'derecha'}.`
+    + (body.tema ? ` Le interesa especialmente: ${body.tema}.` : '')
+    + ` Observa la palma de la fotografía y describe lo que dicen sus líneas. Responde en formato JSON.`;
 
   const r = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: { 'content-type': 'application/json', authorization: `Bearer ${apiKey()}` },
     body: JSON.stringify({
       model: MODELO,
-      max_tokens: 800,
+      max_tokens: 1000,
       temperature: cfg.temperatura,
-      messages: [{ role: 'system', content: construirSystem(modo) }, ...messages]
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: construirSystemLectura(modo) },
+        { role: 'user', content: [
+          { type: 'text', text: intro },
+          { type: 'image_url', image_url: { url: body.dataUrl } }
+        ] }
+      ]
     })
   });
   if (!r.ok) { const t = await r.text(); return { status: r.status, data: { error: 'OpenAI: ' + t.slice(0, 300) } }; }
+
   const data = await r.json();
-  const reply = data.choices?.[0]?.message?.content?.trim() || '';
-  return { status: 200, data: { reply } };
+  let txt = (data.choices?.[0]?.message?.content || '').trim();
+  txt = txt.replace(/^```(json)?/i, '').replace(/```$/, '').trim();
+  let lectura;
+  try { lectura = JSON.parse(txt); }
+  catch (e) { const mm = txt.match(/\{[\s\S]*\}/); lectura = mm ? JSON.parse(mm[0]) : { saludo: txt, lineas: [], cierre: '' }; }
+  return { status: 200, data: { lectura } };
 }
 
 async function handleTranscribe(body) {
@@ -98,4 +125,4 @@ function leadDoc(body) {
   };
 }
 
-module.exports = { MODELO, MODOS, construirSystem, handleChat, handleTranscribe, leadDoc };
+module.exports = { MODELO, MODOS, construirSystemLectura, handleLectura, handleTranscribe, leadDoc };
