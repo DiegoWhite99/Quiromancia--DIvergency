@@ -56,6 +56,12 @@ const server = createServer(async (req, res) => {
   if (req.method === 'POST' && ruta === '/api/transcribe') {
     const r = await handlers.handleTranscribe(await leerBody(req)); return enviar(res, r.status, r.data);
   }
+  if (req.method === 'POST' && ruta === '/api/voz') {
+    const r = await handlers.handleVoz(await leerBody(req)); return enviar(res, r.status, r.data);
+  }
+  if (req.method === 'GET' && ruta === '/api/voces') {
+    const r = await handlers.handleVoces(); return enviar(res, r.status, r.data);
+  }
   if (req.method === 'POST' && ruta === '/api/lead') {
     const doc = handlers.leadDoc(await leerBody(req)); doc.createdAt = new Date().toISOString();
     await guardarLocal(doc, 'leads.local.json'); return enviar(res, 200, { ok: true, local: true });
@@ -81,5 +87,6 @@ server.listen(PORT, () => {
   console.log(`\n  🔮 Quiromancia AI · Divergency  (dev, estructura Firebase)`);
   console.log(`  Local: http://localhost:${PORT}`);
   console.log(`  OPENAI_API_KEY: ${process.env.OPENAI_API_KEY ? 'cargada ✓' : 'NO encontrada ✗ (revisa .env)'}`);
+  console.log(`  ELEVENLABS_API_KEY: ${process.env.ELEVENLABS_API_KEY ? 'cargada ✓' : 'NO encontrada ✗ (voz usará el navegador)'}`);
   console.log(`  Leads → leads.local.json · Predicciones → predicciones.local.json\n`);
 });

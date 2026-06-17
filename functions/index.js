@@ -15,6 +15,7 @@ const db = admin.firestore();
 
 // Secretos (se configuran con: firebase functions:secrets:set NOMBRE)
 const OPENAI_API_KEY = defineSecret('OPENAI_API_KEY');
+const ELEVENLABS_API_KEY = defineSecret('ELEVENLABS_API_KEY'); // voz del oráculo
 const SMTP_USER = defineSecret('SMTP_USER'); // p.ej. tucorreo@gmail.com
 const SMTP_PASS = defineSecret('SMTP_PASS'); // contraseña de aplicación de Gmail
 
@@ -31,6 +32,16 @@ router.post('/lectura', async (req, res) => {
 router.post('/transcribe', async (req, res) => {
   try { const r = await h.handleTranscribe(req.body || {}); res.status(r.status).json(r.data); }
   catch (e) { logger.error('transcribe', e); res.status(500).json({ error: e.message }); }
+});
+
+// Voz del oráculo (ElevenLabs TTS).
+router.post('/voz', async (req, res) => {
+  try { const r = await h.handleVoz(req.body || {}); res.status(r.status).json(r.data); }
+  catch (e) { logger.error('voz', e); res.status(500).json({ error: e.message }); }
+});
+router.get('/voces', async (req, res) => {
+  try { const r = await h.handleVoces(); res.status(r.status).json(r.data); }
+  catch (e) { logger.error('voces', e); res.status(500).json({ error: e.message }); }
 });
 
 // Guarda los datos del formulario (lead) en Firestore.
@@ -100,6 +111,6 @@ app.use('/', router);
 
 exports.api = onRequest(
   { region: 'us-central1', cors: true, timeoutSeconds: 60, memory: '512MiB',
-    secrets: [OPENAI_API_KEY, SMTP_USER, SMTP_PASS] },
+    secrets: [OPENAI_API_KEY, ELEVENLABS_API_KEY, SMTP_USER, SMTP_PASS] },
   app
 );
