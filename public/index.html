@@ -72,16 +72,95 @@
     box-shadow:0 30px 80px -40px rgba(0,0,0,.9), inset 0 1px 0 rgba(255,255,255,.08); }
 
   /* ---------- INTRO (estrella + audio) ---------- */
-  #pantalla-intro{ align-items:center; text-align:center; gap:26px; cursor:pointer; }
-  .estrella-wrap{ position:relative; width:172px; height:172px; display:grid; place-items:center; }
-  .estrella-wrap .rayos{ position:absolute; inset:-45%; border-radius:50%; mix-blend-mode:screen;
-    background:conic-gradient(from 0deg, transparent 0 16deg, rgba(235,200,120,.18) 21deg, transparent 26deg 58deg, rgba(91,91,255,.16) 63deg, transparent 68deg 104deg, rgba(235,200,120,.14) 109deg, transparent 114deg);
-    animation:girarRayos 16s linear infinite; }
+  #pantalla-intro{ align-items:center; text-align:center; justify-content:center;
+    gap:clamp(13px,2.4vh,22px); cursor:pointer; overflow:hidden; }
+
+  /* Capa de fondo de la intro: nebulosa dorada + viñeta + íconos místicos flotantes */
+  #intro-fx{ position:fixed; inset:0; z-index:1; pointer-events:none; overflow:hidden; transition:opacity 1s ease;
+    background:
+      radial-gradient(38% 21% at 50% 23%, rgba(255,201,122,.12), rgba(255,201,122,.03) 46%, transparent 66%),
+      linear-gradient(180deg, rgba(6,5,18,.93) 0%, rgba(8,6,22,.78) 34%, rgba(6,5,18,.7) 62%, rgba(4,3,12,.88) 100%); }
+  #intro-fx.oculto{ opacity:0; }
+  /* Grano/textura para una nebulosa orgánica (sin banding ni figuras) */
+  .neb-grain{ position:absolute; inset:0; pointer-events:none; opacity:.42; mix-blend-mode:soft-light;
+    background-size:220px 220px;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+  /* Neblina/humo muy sutil que deriva y difumina cualquier borde */
+  .neb-niebla{ position:absolute; inset:-25%; pointer-events:none; mix-blend-mode:screen; opacity:.5;
+    background:
+      radial-gradient(48% 34% at 28% 52%, rgba(222,206,186,.14), transparent 66%),
+      radial-gradient(52% 38% at 73% 62%, rgba(206,198,220,.12), transparent 66%),
+      radial-gradient(46% 36% at 50% 80%, rgba(198,188,218,.12), transparent 68%);
+    filter:blur(32px); will-change:transform;
+    animation:nieblaDrift 30s ease-in-out infinite alternate; }
+  @keyframes nieblaDrift{
+    0%{   transform:translate3d(-3%, 1%, 0) scale(1.06); }
+    50%{  transform:translate3d(2%, -2%, 0) scale(1.13); }
+    100%{ transform:translate3d(3%, 2%, 0) scale(1.07); }
+  }
+  .ico-flota{ position:absolute; color:var(--oro-suave); display:block; height:auto;
+    filter:drop-shadow(0 0 10px rgba(150,180,255,.6));
+    animation:flota var(--d,15s) ease-in-out infinite; animation-delay:var(--dl,0s); will-change:transform,opacity; }
+  /* En su fase tenue cambian a azul semiclaro y siguen visibles; al brillar vuelven al dorado */
+  @keyframes flota{
+    0%{   transform:translateY(8px)   rotate(var(--r0,-6deg)); opacity:.46; color:#93B6FF; }
+    50%{  transform:translateY(-20px) rotate(var(--r1,6deg));  opacity:.52; color:var(--oro-suave); }
+    100%{ transform:translateY(8px)   rotate(var(--r0,-6deg)); opacity:.46; color:#93B6FF; }
+  }
+
+  /* Estrella central: núcleo + cruz + halo + anillo + chispas */
+  .estrella-wrap{ position:relative; width:clamp(190px,54vw,270px); aspect-ratio:1; display:grid; place-items:center; }
+  .estrella-wrap .halo{ position:absolute; inset:-48%; border-radius:50%; mix-blend-mode:screen;
+    background:radial-gradient(circle, rgba(255,236,180,.40) 0%, rgba(235,200,120,.13) 20%, rgba(235,200,120,.04) 38%, transparent 60%);
+    animation:haloLate 4s ease-in-out infinite; }
+  @keyframes haloLate{ 0%,100%{ transform:scale(.9); opacity:.7 } 50%{ transform:scale(1.08); opacity:1 } }
+  .estrella-wrap .rayos{ position:absolute; inset:-34%; border-radius:50%; mix-blend-mode:screen;
+    background:conic-gradient(from 0deg, transparent 0 14deg, rgba(235,200,120,.14) 20deg, transparent 26deg 56deg, rgba(255,225,150,.10) 62deg, transparent 68deg 104deg, rgba(235,200,120,.12) 110deg, transparent 116deg);
+    -webkit-mask-image:radial-gradient(circle, #000 22%, transparent 68%); mask-image:radial-gradient(circle, #000 22%, transparent 68%);
+    animation:girarRayos 22s linear infinite; }
   @keyframes girarRayos{ to{ transform:rotate(360deg) } }
-  .sparkle{ width:126px; height:126px; position:relative; z-index:1;
-    filter:drop-shadow(0 0 20px rgba(235,200,120,.85)); animation:lateEstrella 2.8s ease-in-out infinite; }
-  @keyframes lateEstrella{ 0%,100%{ transform:scale(.92) rotate(0deg) } 50%{ transform:scale(1.07) rotate(10deg) } }
-  .intro-prompt{ font-size:13px; letter-spacing:.2em; text-transform:uppercase; color:var(--oro); animation:tw 2.2s ease-in-out infinite; }
+  /* Destello en cruz (detrás del núcleo) */
+  .flare{ position:absolute; left:50%; top:50%; pointer-events:none; mix-blend-mode:screen;
+    transform:translate(-50%,-50%); animation:flarePulso 3s ease-in-out infinite; }
+  .flare.v{ width:2px; height:150%; background:linear-gradient(180deg, transparent, rgba(255,247,225,.85) 50%, transparent); }
+  .flare.h{ width:135%; height:1.5px; background:linear-gradient(90deg, transparent, rgba(255,243,210,.6) 50%, transparent); }
+  @keyframes flarePulso{ 0%,100%{ opacity:.6 } 50%{ opacity:1 } }
+  /* Chispas doradas alrededor */
+  .chispas{ position:absolute; inset:-12%; pointer-events:none; }
+  .chispa{ position:absolute; width:var(--s,3px); height:var(--s,3px); border-radius:50%;
+    background:#ffe9b8; box-shadow:0 0 6px 1px rgba(235,200,120,.85);
+    transform:translate(-50%,-50%); animation:tw var(--tw,3s) ease-in-out infinite; animation-delay:var(--td,0s); }
+  /* Estrella (img Estrella.svg) con pulso + glow */
+  .sparkle{ width:78%; height:auto; position:relative; z-index:2; object-fit:contain;
+    filter:drop-shadow(0 0 16px rgba(255,228,160,.7)) drop-shadow(0 0 42px rgba(235,200,120,.5));
+    animation:lateEstrella 3s ease-in-out infinite; }
+  @keyframes lateEstrella{ 0%,100%{ transform:scale(.95) } 50%{ transform:scale(1.05) } }
+
+  /* Logo Divergency AI (pequeño, bajo la estrella) */
+  .intro-logo{ width:clamp(140px,38vw,182px); height:auto; display:block; margin:0 auto;
+    filter:drop-shadow(0 0 10px rgba(235,200,120,.4)); }
+
+  /* Título + tagline */
+  #pantalla-intro h1{ font-family:var(--display); font-weight:700; font-variant-caps:small-caps;
+    font-size:clamp(38px,10.5vw,66px); letter-spacing:.03em; color:#F4EEDD; line-height:1; text-shadow:0 0 30px rgba(235,200,120,.18); }
+  #pantalla-intro h1 .ai{ font-style:normal;
+    background:linear-gradient(180deg,#FBE9B5 0%, #E7BE6B 45%, #C8902F 100%);
+    -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; color:transparent; }
+  .intro-tagline{ margin:14px auto 0; font-size:13.5px; letter-spacing:.05em; color:var(--texto-mute);
+    max-width:380px; line-height:1.6; display:flex; align-items:center; gap:12px; justify-content:center; }
+  .intro-tagline .sp{ color:var(--oro); font-size:11px; flex:none; animation:tw 2.4s ease-in-out infinite; }
+
+  /* Botón "Tocar para iniciar" con borde dorado degradado */
+  .intro-btn{ display:inline-flex; align-items:center; gap:14px; margin-top:8px;
+    border:2px solid transparent; border-radius:999px; padding:17px 36px;
+    color:#F6EFD9; font-family:var(--cuerpo); font-weight:600; letter-spacing:.24em; text-transform:uppercase; font-size:13px;
+    background:linear-gradient(rgba(10,8,26,.45),rgba(10,8,26,.45)) padding-box,
+               linear-gradient(135deg, #FBE9B5, #C8902F 48%, #FBE9B5) border-box;
+    box-shadow:0 0 26px -6px rgba(235,200,120,.5); animation:btnPulso 3s ease-in-out infinite; }
+  @keyframes btnPulso{ 0%,100%{ box-shadow:0 0 22px -8px rgba(235,200,120,.4) }
+    50%{ box-shadow:0 0 34px -2px rgba(235,200,120,.6) } }
+  .intro-btn .sp{ color:var(--oro-suave); animation:tw 2.2s ease-in-out infinite; }
+
   .estrella-fugaz{ position:fixed; top:0; left:0; width:150px; height:2px; pointer-events:none; opacity:0; z-index:1;
     background:linear-gradient(90deg, transparent, #fff); filter:drop-shadow(0 0 6px #fff); animation:fugaz 6s ease-in infinite; }
   .estrella-fugaz.f1{ animation-delay:1.2s; }
@@ -101,12 +180,15 @@
   .sub{ font-size:16px; line-height:1.6; max-width:440px; }
 
   /* ---------- Modos ---------- */
-  .modos{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; width:100%; max-width:540px; }
-  .modos button{ display:flex; flex-direction:column; align-items:center; gap:6px; text-align:center;
+  .modos{ display:grid; grid-template-columns:repeat(2,1fr); gap:12px; width:100%; max-width:420px; }
+  .modos button{ display:flex; flex-direction:column; align-items:center; gap:8px; text-align:center;
     font-family:var(--cuerpo); color:var(--texto-mute);
     background:rgba(255,255,255,.05); border:1.5px solid var(--card-borde);
-    border-radius:18px; padding:18px 8px; cursor:pointer; transition:all .18s; }
-  .modos button .mi{ font-size:28px; line-height:1; }
+    border-radius:18px; padding:20px 10px; cursor:pointer; transition:all .18s; }
+  .modos button .mi{ font-size:28px; line-height:1; height:32px; display:grid; place-items:center; }
+  .modos button .mi svg{ width:auto; height:30px; color:var(--oro); display:block;
+    filter:drop-shadow(0 0 6px rgba(235,200,120,.45)); transition:color .18s; }
+  .modos button.sel .mi svg{ color:var(--oro-suave); filter:drop-shadow(0 0 8px rgba(235,200,120,.7)); }
   .modos button b{ font-size:15px; color:var(--texto); font-weight:600; }
   .modos button small{ font-size:11.5px; line-height:1.3; }
   .modos button.sel{ border-color:transparent; color:#fff;
@@ -182,12 +264,12 @@
 
   /* ---------- Análisis ---------- */
   #pantalla-analisis{ align-items:center; text-align:center; gap:24px; }
-  .scan-wrap{ position:relative; width:240px; height:312px; border-radius:24px; overflow:hidden;
-    border:1px solid var(--card-borde); box-shadow:0 30px 80px -40px #000, 0 0 40px -8px rgba(91,91,255,.45); }
-  .scan-wrap img{ width:100%; height:100%; object-fit:cover; filter:brightness(.6) contrast(1.1) saturate(.85); }
-  .scan-wrap .grid{ position:absolute; inset:0; opacity:.22; mix-blend-mode:screen;
-    background-image:linear-gradient(rgba(91,91,255,.5) 1px,transparent 1px), linear-gradient(90deg, rgba(91,91,255,.5) 1px,transparent 1px);
-    background-size:24px 24px; }
+  .scan-wrap{ position:relative; width:min(84vw,330px); aspect-ratio:3/4; border-radius:24px; overflow:hidden;
+    border:1px solid var(--card-borde); box-shadow:0 30px 80px -40px #000, 0 0 40px -8px rgba(235,200,120,.35); }
+  .scan-wrap img{ width:100%; height:100%; object-fit:cover; }
+  .scan-wrap .grid{ position:absolute; inset:0; opacity:.1; mix-blend-mode:screen;
+    background-image:linear-gradient(rgba(235,200,120,.4) 1px,transparent 1px), linear-gradient(90deg, rgba(235,200,120,.4) 1px,transparent 1px);
+    background-size:26px 26px; }
   .scan-wrap .radar{ position:absolute; inset:-30%; mix-blend-mode:screen;
     background:conic-gradient(from 0deg, rgba(235,200,120,0) 0deg, rgba(235,200,120,.22) 36deg, rgba(235,200,120,0) 74deg);
     animation:girarRadar 2.8s linear infinite; }
@@ -268,6 +350,36 @@
   .res-cierre{ text-align:center; font-style:italic; color:var(--oro-suave); font-size:15.5px; line-height:1.6; padding:4px 8px; }
   .res-actions{ display:flex; gap:12px; }
 
+  /* Pista + tarjetas de descripción por línea (bajo el croquis) */
+  .res-pista{ text-align:center; font-size:12.5px; color:var(--texto-mute); margin:0; }
+  .res-cards{ display:flex; flex-direction:column; gap:12px; }
+  .linea-card{ padding:14px 16px; border-left:3px solid var(--c,#EBC878); scroll-margin-top:14px;
+    transition:box-shadow .35s ease, transform .35s ease; }
+  .linea-card .lc-tit{ font-family:var(--display); font-weight:700; font-size:17px; margin-bottom:5px; display:flex; align-items:center; gap:7px; }
+  .linea-card .lc-obs{ font-size:13px; font-style:italic; color:var(--texto-mute); line-height:1.5; margin-bottom:5px; }
+  .linea-card .lc-txt{ font-size:15px; line-height:1.6; color:#ddddf5; }
+  .linea-card.err-card .lc-tit{ color:#ff9b9b; }
+  .linea-card.flash{ animation:cardFlash 1.3s ease; }
+  @keyframes cardFlash{ 0%{ box-shadow:0 0 0 2px var(--c,#EBC878), 0 0 28px -4px var(--c,#EBC878); transform:scale(1.015); }
+    100%{ box-shadow:0 14px 40px -30px #000; transform:none; } }
+  .res-extra{ padding:14px 16px; }
+  .res-extra .lc-tit{ font-family:var(--display); font-weight:700; font-size:16px; margin-bottom:5px; }
+  .res-extra .lc-txt{ font-size:15px; line-height:1.6; color:#ddddf5; }
+
+  /* Botón de WhatsApp */
+  .btn-wa{ display:flex; align-items:center; justify-content:center; gap:11px; width:100%;
+    background:linear-gradient(135deg,#25D366,#128C7E); color:#fff; border:none; border-radius:16px; padding:15px;
+    font-family:var(--cuerpo); font-weight:600; font-size:16px; cursor:pointer;
+    box-shadow:0 10px 26px -12px rgba(37,211,102,.8); transition:transform .15s; margin-top:6px; }
+  .btn-wa:active{ transform:translateY(2px); }
+
+  /* Responsive */
+  @media (max-width:380px){
+    .linea-card{ padding:12px 13px; } .linea-card .lc-tit{ font-size:16px; } .linea-card .lc-txt{ font-size:14px; }
+    .res-actions{ flex-direction:column; }
+    .res-head .icon-btn{ width:38px; height:38px; font-size:16px; }
+  }
+
   .err{ color:#ff9b9b; font-size:14px; min-height:18px; text-align:center; }
   .nota{ font-size:12px; color:var(--texto-mute); text-align:center; }
 </style>
@@ -277,26 +389,123 @@
 <div id="cosmos"></div>
 <canvas id="stars"></canvas>
 
+<!-- Biblioteca de íconos místicos (tarot · quiromancia · astrología) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="ic-mano" viewBox="0 0 120 120">
+      <path d="M60 22c-5 0-8 4-8 10v30l-5-5c-4-4-10-4-13 0-3 3-3 8 0 11l22 25c5 6 11 8 18 8 14 0 25-11 25-25V40c0-5-4-9-9-9s-9 4-9 9v-3c0-5-4-9-9-9s-9 4-9 9v-5c0-6-4-10-9-10z"
+            fill="none" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="ic-ojo" viewBox="0 0 24 24">
+      <path d="M1.5 12S5 5 12 5s10.5 7 10.5 7-3.5 7-10.5 7S1.5 12 1.5 12z" fill="none" stroke="currentColor" stroke-width="1.4"/>
+      <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.4"/>
+      <circle cx="12" cy="12" r="1" fill="currentColor"/>
+    </symbol>
+    <symbol id="ic-luna" viewBox="0 0 24 24">
+      <path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="ic-sol" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="4.5" fill="none" stroke="currentColor" stroke-width="1.4"/>
+      <g stroke="currentColor" stroke-width="1.4" stroke-linecap="round">
+        <line x1="12" y1="1.5" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22.5"/>
+        <line x1="1.5" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22.5" y2="12"/>
+        <line x1="4.2" y1="4.2" x2="6" y2="6"/><line x1="18" y1="18" x2="19.8" y2="19.8"/>
+        <line x1="19.8" y1="4.2" x2="18" y2="6"/><line x1="6" y1="18" x2="4.2" y2="19.8"/>
+      </g>
+    </symbol>
+    <symbol id="ic-estrella" viewBox="0 0 24 24">
+      <path d="M12 2l2.7 6.1 6.6.6-5 4.4 1.5 6.5L12 16.8 6.2 20.1l1.5-6.5-5-4.4 6.6-.6z" fill="currentColor"/>
+    </symbol>
+    <symbol id="ic-carta" viewBox="0 0 26 34">
+      <rect x="2" y="2" width="22" height="30" rx="3" fill="none" stroke="currentColor" stroke-width="1.5"/>
+      <path d="M13 8l1.7 3.8 4.1.4-3.1 2.7.9 4-3.6-2-3.6 2 .9-4-3.1-2.7 4.1-.4z" fill="currentColor"/>
+      <line x1="7" y1="24" x2="19" y2="24" stroke="currentColor" stroke-width="1.2"/>
+      <line x1="9" y1="27.5" x2="17" y2="27.5" stroke="currentColor" stroke-width="1.2"/>
+    </symbol>
+    <symbol id="ic-saturno" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="5" fill="none" stroke="currentColor" stroke-width="1.4"/>
+      <ellipse cx="12" cy="12" rx="10" ry="3.4" fill="none" stroke="currentColor" stroke-width="1.4" transform="rotate(-22 12 12)"/>
+    </symbol>
+    <symbol id="ic-constel" viewBox="0 0 32 32">
+      <g stroke="currentColor" stroke-width="1">
+        <line x1="5" y1="8" x2="14" y2="15"/><line x1="14" y1="15" x2="25" y2="10"/><line x1="14" y1="15" x2="18" y2="27"/>
+      </g>
+      <g fill="currentColor">
+        <circle cx="5" cy="8" r="1.6"/><circle cx="14" cy="15" r="2"/><circle cx="25" cy="10" r="1.6"/><circle cx="18" cy="27" r="1.6"/>
+      </g>
+    </symbol>
+    <symbol id="ic-zodiaco" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" stroke-width="1.2"/>
+      <circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="1.2"/>
+      <g stroke="currentColor" stroke-width="1.2">
+        <line x1="12" y1="2.5" x2="12" y2="8"/><line x1="12" y1="16" x2="12" y2="21.5"/>
+        <line x1="2.5" y1="12" x2="8" y2="12"/><line x1="16" y1="12" x2="21.5" y2="12"/>
+      </g>
+    </symbol>
+    <symbol id="ic-sparkle" viewBox="0 0 100 100">
+      <path d="M50 3 C55 35 65 45 97 50 C65 55 55 65 50 97 C45 65 35 55 3 50 C35 45 45 35 50 3 Z" fill="currentColor"/>
+    </symbol>
+  </defs>
+</svg>
+
+<!-- Capa de íconos místicos flotantes (fondo de la intro) -->
+<div id="intro-fx" aria-hidden="true">
+  <div class="neb-grain"></div>
+  <div class="neb-niebla"></div>
+  <svg class="ico-flota" style="top:12%; left:8%;  width:46px; --d:16s; --dl:0s;   --r0:-8deg; --r1:6deg"><use href="#ic-mano"/></svg>
+  <svg class="ico-flota" style="top:22%; left:82%; width:30px; --d:13s; --dl:1.5s; --r0:6deg;  --r1:-8deg"><use href="#ic-ojo"/></svg>
+  <svg class="ico-flota" style="top:67%; left:84%; width:34px; --d:18s; --dl:.6s;  --r0:-5deg; --r1:7deg"><use href="#ic-luna"/></svg>
+  <svg class="ico-flota" style="top:78%; left:11%; width:34px; --d:15s; --dl:2.2s; --r0:8deg;  --r1:-6deg"><use href="#ic-sol"/></svg>
+  <svg class="ico-flota" style="top:40%; left:6%;  width:22px; --d:11s; --dl:3s;   --r0:0deg;  --r1:0deg"><use href="#ic-estrella"/></svg>
+  <svg class="ico-flota" style="top:55%; left:90%; width:20px; --d:12s; --dl:1s;   --r0:0deg;  --r1:0deg"><use href="#ic-estrella"/></svg>
+  <svg class="ico-flota" style="top:14%; left:60%; width:30px; --d:17s; --dl:2.6s; --r0:-7deg; --r1:5deg"><use href="#ic-carta"/></svg>
+  <svg class="ico-flota" style="top:84%; left:55%; width:30px; --d:19s; --dl:.4s;  --r0:6deg;  --r1:-7deg"><use href="#ic-saturno"/></svg>
+  <svg class="ico-flota" style="top:30%; left:30%; width:34px; --d:14s; --dl:1.8s; --r0:-4deg; --r1:6deg"><use href="#ic-constel"/></svg>
+  <svg class="ico-flota" style="top:8%;  left:42%; width:18px; --d:10s; --dl:.9s;  --r0:0deg;  --r1:0deg"><use href="#ic-sparkle"/></svg>
+  <svg class="ico-flota" style="top:62%; left:34%; width:26px; --d:16s; --dl:3.4s; --r0:7deg;  --r1:-5deg"><use href="#ic-zodiaco"/></svg>
+  <svg class="ico-flota" style="top:90%; left:80%; width:16px; --d:9s;  --dl:2s;   --r0:0deg;  --r1:0deg"><use href="#ic-sparkle"/></svg>
+</div>
+
 <div id="app">
 
   <!-- ============ INTRO ============ -->
   <section class="screen activo" id="pantalla-intro">
     <span class="estrella-fugaz f1"></span>
     <span class="estrella-fugaz f2"></span>
+
     <div class="estrella-wrap">
+      <div class="halo"></div>
       <div class="rayos"></div>
-      <svg class="sparkle" viewBox="0 0 100 100" aria-hidden="true">
-        <defs><radialGradient id="gEstrella" cx="50%" cy="50%" r="60%">
-          <stop offset="0" stop-color="#fff7e6"/><stop offset="55%" stop-color="#EBC878"/><stop offset="100%" stop-color="#b8862f"/>
-        </radialGradient></defs>
-        <path d="M50 3 C55 35 65 45 97 50 C65 55 55 65 50 97 C45 65 35 55 3 50 C35 45 45 35 50 3 Z" fill="url(#gEstrella)"/>
-      </svg>
+      <div class="chispas">
+        <i class="chispa" style="top:6%;  left:50%; --s:4px;   --tw:3.2s; --td:0s"></i>
+        <i class="chispa" style="top:15%; left:74%; --s:3px;   --tw:2.6s; --td:.6s"></i>
+        <i class="chispa" style="top:40%; left:92%; --s:3.5px; --tw:3.6s; --td:1.1s"></i>
+        <i class="chispa" style="top:66%; left:90%; --s:2.5px; --tw:2.9s; --td:.3s"></i>
+        <i class="chispa" style="top:86%; left:74%; --s:3px;   --tw:3.4s; --td:1.5s"></i>
+        <i class="chispa" style="top:93%; left:48%; --s:4px;   --tw:2.7s; --td:.9s"></i>
+        <i class="chispa" style="top:85%; left:24%; --s:3px;   --tw:3.1s; --td:.2s"></i>
+        <i class="chispa" style="top:64%; left:9%;  --s:3.5px; --tw:3.7s; --td:1.3s"></i>
+        <i class="chispa" style="top:39%; left:7%;  --s:2.5px; --tw:2.8s; --td:.5s"></i>
+        <i class="chispa" style="top:16%; left:25%; --s:3px;   --tw:3.3s; --td:1s"></i>
+        <i class="chispa" style="top:30%; left:33%; --s:2px;   --tw:2.5s; --td:.7s"></i>
+        <i class="chispa" style="top:70%; left:66%; --s:2px;   --tw:3s;   --td:1.7s"></i>
+        <i class="chispa" style="top:28%; left:64%; --s:2px;   --tw:2.6s; --td:.4s"></i>
+        <i class="chispa" style="top:72%; left:36%; --s:2px;   --tw:3.5s; --td:1.2s"></i>
+      </div>
+      <div class="flare v"></div>
+      <div class="flare h"></div>
+      <img class="sparkle" src="img/Estrella.svg" alt="" aria-hidden="true" />
     </div>
+
+    <img class="intro-logo" src="img/logo.png" alt="Divergency AI" />
+
     <div>
-      <div class="marca">Divergency</div>
-      <h1 style="margin-top:14px; font-size:clamp(34px,8vw,54px)">Quiromancia <em style="font-style:italic; color:var(--oro)">AI</em></h1>
+      <h1>Quiromancia <span class="ai">AI</span></h1>
+      <p class="intro-tagline"><span class="sp">✦</span> Tradición ancestral impulsada por Inteligencia Artificial <span class="sp">✦</span></p>
     </div>
-    <div class="intro-prompt">✦ Toca para comenzar ✦</div>
+
+    <div class="intro-btn"><span class="sp">✦</span> Tocar para iniciar <span class="sp">✦</span></div>
+
     <audio id="intro-audio" src="mp3/yodguard-healing-magic-5-378667.mp3" preload="auto"></audio>
   </section>
 
@@ -314,9 +523,8 @@
     <p class="sub mute">Elige la voz de tu oráculo. Luego capturaremos la palma de tu mano para comenzar la lectura.</p>
 
     <div class="modos" id="sel-modo">
-      <button data-modo="serio"><span class="mi">🎯</span><b>Serio</b><small>Directo y contundente</small></button>
-      <button data-modo="mistico" class="sel"><span class="mi">🔮</span><b>Oráculo</b><small>Místico, como Delfos</small></button>
-      <button data-modo="burlon"><span class="mi">😏</span><b>Burlón</b><small>Humor elocuente</small></button>
+      <button data-modo="serio" class="sel"><span class="mi"><svg viewBox="0 0 24 24"><use href="#ic-ojo"/></svg></span><b>Serio</b><small>Directo y contundente</small></button>
+      <button data-modo="burlon"><span class="mi"><svg viewBox="0 0 26 34"><use href="#ic-carta"/></svg></span><b>Burlón</b><small>Humor elocuente</small></button>
     </div>
 
     <div style="width:100%; max-width:440px; margin-top:4px">
@@ -442,7 +650,7 @@
         </div>
       </div>
       <button class="icon-btn on" id="btn-tts" title="Leer en voz alta">🔊</button>
-      <button class="icon-btn" id="btn-recibir" title="Recibir mi predicción por correo">📩</button>
+      <button class="icon-btn" id="btn-recibir" title="Recibir mi predicción por WhatsApp">📲</button>
       <button class="icon-btn" id="btn-reiniciar" title="Nueva lectura">↺</button>
     </div>
 
@@ -450,15 +658,15 @@
       <div class="res-mapa" id="res-foto-wrap">
         <canvas id="res-canvas"></canvas>
       </div>
-      <div class="glass res-desc" id="res-desc">
-        <div class="res-desc-tit" id="desc-tit">Tu lectura</div>
-        <p id="desc-texto">Toca una línea de la mano para ver su significado.</p>
-      </div>
+      <p class="res-saludo" id="res-saludo"></p>
+      <p class="res-pista" id="res-pista">✦ Toca una caja del croquis para resaltar su línea.</p>
+      <div class="res-cards" id="res-cards"></div>
+      <div class="glass res-extra" id="res-extra" hidden></div>
     </div>
 
     <div class="res-actions">
       <button class="btn fantasma" id="btn-reiniciar2">↺ Nueva</button>
-      <button class="btn oro" id="btn-recibir2">📩 Recibir por correo</button>
+      <button class="btn oro" id="btn-recibir2">📲 Recibir por WhatsApp</button>
     </div>
     <audio id="bg-audio" src="mp3/dragon.mp3" loop preload="auto"></audio>
   </section>
@@ -481,17 +689,14 @@
 <!-- ============ MODAL RECIBIR PREDICCIÓN ============ -->
 <div id="modal-recibir">
   <div class="glass modal-card">
-    <div class="sello">📩</div>
-    <h2>¿Deseas recibir tu predicción?</h2>
-    <p>Inicia sesión con Google y te enviaremos tu lectura completa a tu correo electrónico.</p>
-    <button class="btn-google" id="btn-google">
-      <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
-        <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.6l6.7-6.7C35.6 2.4 30.2 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.8 6.1C12.2 13.1 17.6 9.5 24 9.5z"/>
-        <path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.5 3-2.2 5.5-4.8 7.2l7.4 5.7C43.9 37.7 46.5 31.6 46.5 24.5z"/>
-        <path fill="#FBBC05" d="M10.4 28.3c-.5-1.5-.8-3.1-.8-4.8s.3-3.3.8-4.8l-7.8-6.1C.9 15.8 0 19.8 0 24s.9 8.2 2.6 11.4l7.8-6.1z"/>
-        <path fill="#34A853" d="M24 48c6.2 0 11.4-2 15.2-5.5l-7.4-5.7c-2 1.4-4.7 2.3-7.8 2.3-6.4 0-11.8-3.6-13.6-8.8l-7.8 6.1C6.5 42.6 14.6 48 24 48z"/>
+    <div class="sello">📲</div>
+    <h2>¿Quieres el resto de tu lectura?</h2>
+    <p>Si quieres conocer tu lectura completa, pulsa el botón y te la enviamos por <b style="color:#25D366">WhatsApp</b>.</p>
+    <button class="btn-wa" id="btn-whatsapp">
+      <svg width="20" height="20" viewBox="0 0 32 32" aria-hidden="true" fill="#fff">
+        <path d="M16 3C9.4 3 4 8.4 4 15c0 2.1.6 4.2 1.6 6L4 29l8.2-1.6c1.8 1 3.8 1.5 5.8 1.5 6.6 0 12-5.4 12-12S22.6 3 16 3zm0 21.8c-1.8 0-3.5-.5-5-1.4l-.4-.2-3.4.7.7-3.3-.2-.4c-1-1.6-1.5-3.4-1.5-5.2 0-5.4 4.4-9.8 9.8-9.8s9.8 4.4 9.8 9.8-4.4 9.8-9.8 9.8zm5.4-7.3c-.3-.1-1.8-.9-2-.9-.3-.1-.5-.1-.7.1-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-.3-.1-1.3-.5-2.4-1.5-.9-.8-1.5-1.8-1.7-2.1-.2-.3 0-.5.1-.6.1-.1.3-.3.4-.5.2-.2.2-.3.3-.5.1-.2.1-.4 0-.5-.1-.1-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.1.2 2.1 3.2 5 4.5.7.3 1.2.5 1.7.6.7.2 1.3.2 1.8.1.6-.1 1.8-.7 2-1.4.2-.7.2-1.3.2-1.4-.1-.2-.3-.2-.6-.4z"/>
       </svg>
-      Continuar con Google
+      Enviar a WhatsApp
     </button>
     <div class="recibir-estado" id="recibir-estado"></div>
     <button class="btn fantasma" id="btn-recibir-cerrar">Ahora no</button>
@@ -524,6 +729,36 @@
   };
 </script>
 
+<!-- MediaPipe Hand Landmarker: "escanea" la mano (21 puntos) para anclar las líneas sobre la foto real -->
+<script type="module">
+  import { HandLandmarker, FilesetResolver } from 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs';
+  let _lm = null, _cargando = null;
+  async function init(){
+    if(_lm) return _lm;
+    if(_cargando) return _cargando;
+    _cargando = (async () => {
+      const fileset = await FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm');
+      _lm = await HandLandmarker.createFromOptions(fileset, {
+        baseOptions: { modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task' },
+        numHands: 1, runningMode: 'IMAGE'
+      });
+      return _lm;
+    })();
+    return _cargando;
+  }
+  // Precarga (descarga el modelo mientras el usuario toma la foto).
+  window.precargarMano = () => { init().catch(()=>{}); };
+  // Detecta la mano en un <img> ya cargado. Devuelve 21 puntos {x,y} normalizados o null.
+  window.detectarMano = async function(imgEl){
+    try{
+      const lm = await init();
+      const res = lm.detect(imgEl);
+      if(res && res.landmarks && res.landmarks.length) return res.landmarks[0];
+    }catch(e){ console.warn('MediaPipe mano:', e); }
+    return null;
+  };
+</script>
+
 <script>
 /* ============================================================
    Quiromancia AI · Divergency
@@ -535,8 +770,8 @@ const MODOS_UI = { serio:'Modo Serio', mistico:'Oráculo de Delfos', burlon:'Mod
 const PALETA = { verde:'#54E08A', azul:'#5B9BFF', rosa:'#FF6FB5', dorado:'#EBC878', morado:'#B083FF', rojo:'#FF6B6B' };
 
 const estado = {
-  modo:'mistico', nombre:'', correo:'', cel:'', mano:'derecha', fecha:'', anio:'', tema:'', signo:'', flipManual:false, mirror:false,
-  dataUrl:'', stream:null, lectura:null, tts:true
+  modo:'serio', nombre:'', correo:'', cel:'', mano:'derecha', fecha:'', anio:'', tema:'', signo:'', flipManual:false, mirror:false,
+  dataUrl:'', stream:null, lectura:null, tts:true, landmarks:null
 };
 
 const $ = (s) => document.querySelector(s);
@@ -671,6 +906,7 @@ function guardarLead(){
 /* ====================== CÁMARA (tema de escaneo) ====================== */
 async function iniciarCamara(){
   detenerCamara();
+  if(window.precargarMano) window.precargarMano();   // descarga el modelo mientras se toma la foto
   const video = $('#video');
   $('#err-camara').textContent = '';
   estado.mirror = false;
@@ -720,6 +956,14 @@ function guardarImagen(fuente, w, h, espejo){
   if(espejo){ ctx.translate(cw,0); ctx.scale(-1,1); }      // espeja para coincidir con el preview
   ctx.drawImage(fuente,0,0,cw,ch);
   estado.dataUrl = cv.toDataURL('image/jpeg', 0.9);
+  // Escanea la mano (MediaPipe, en segundo plano): cuando termina, las líneas se
+  // anclan a la mano real de la foto. El bucle del canvas lo recoge en vivo.
+  estado.landmarks = null;
+  if(window.detectarMano){
+    const im = new Image();
+    im.onload = async () => { try{ estado.landmarks = await window.detectarMano(im); }catch(e){} };
+    im.src = estado.dataUrl;
+  }
   detenerCamara();
   iniciarLectura();
 }
@@ -763,9 +1007,9 @@ $('#btn-aceptar').addEventListener('click', () => {
   estado.recibirOfrecido = false;
   if(!(estado.lectura && estado.lectura.error)){
     const txt = compilarPrediccion();
-    hablar(txt, ofrecerRecibir);   // si la voz está activa, ofrece el correo al TERMINAR de leerla
-    // Respaldo: si no hay voz (o no dispara), ofrece tras un tiempo prudente.
-    setTimeout(ofrecerRecibir, estado.tts ? 75000 : 16000);
+    hablar(txt, ofrecerRecibir);   // si la voz está activa, ofrece WhatsApp al TERMINAR de leerla (~1 min)
+    // Respaldo: si no hay voz (o no dispara onended), ofrece WhatsApp tras ~1 minuto.
+    setTimeout(ofrecerRecibir, estado.tts ? 75000 : 60000);
   }
 });
 
@@ -796,13 +1040,30 @@ function renderResultado(){
   const chipL = $('#chip-lectura'); chipL.textContent = 'Lectura ' + n + '/3'; chipL.className = 'chip lectura';
   $('#btn-tts').classList.toggle('on', estado.tts);
 
+  const saludoEl = $('#res-saludo'), cardsEl = $('#res-cards'), extraEl = $('#res-extra'), pista = $('#res-pista');
   if(a.error){
-    $('#desc-tit').textContent = 'Las brumas no se despejaron';
-    $('#desc-texto').textContent = a.error + '  ·  Toca ↺ para intentar de nuevo.';
+    saludoEl.textContent = '';
+    pista.style.display = 'none';
+    cardsEl.innerHTML = '<div class="glass linea-card err-card"><div class="lc-tit">Las brumas no se despejaron</div>'
+      + '<div class="lc-txt">' + esc(a.error) + ' · Toca ↺ para intentar de nuevo.</div></div>';
+    extraEl.hidden = true;
   } else {
-    showResumen();
+    saludoEl.textContent = a.saludo || '';
+    pista.style.display = '';
+    // Una tarjeta por línea (cada caja tiene su descripción, siempre visible)
+    cardsEl.innerHTML = (a.lineas || []).map((l,i) => {
+      const col = PALETA[(l.color||'').toLowerCase()] || '#EBC878';
+      return '<div class="glass linea-card" id="lc-'+i+'" style="--c:'+col+'">'
+        + '<div class="lc-tit" style="color:'+col+'">' + (l.simbolo ? esc(l.simbolo)+' ' : '') + esc(l.nombre||'') + '</div>'
+        + (l.observacion ? '<div class="lc-obs">'+esc(l.observacion)+'</div>' : '')
+        + '<div class="lc-txt">'+esc(l.lectura||'')+'</div></div>';
+    }).join('');
+    let extra = '';
+    if(a.montes) extra += '<div class="lc-tit" style="color:var(--oro-suave)">✋ Montes y forma de la mano</div><div class="lc-txt">'+esc(a.montes)+'</div>';
+    if(a.cierre) extra += '<p class="res-cierre" style="margin-top:10px">'+esc(a.cierre)+'</p>';
+    extraEl.innerHTML = extra; extraEl.hidden = !extra;
   }
-  // Dibuja el diagrama de la mano (malla + líneas de color + cajitas).
+  // Dibuja el diagrama de la mano (croquis + líneas de color + cajitas).
   dibujarManoCanvas(estado.dataUrl, a.lineas || []);
 }
 
@@ -886,83 +1147,85 @@ function _aristas(pts, k){
   return edges;
 }
 
-// Mano holográfica centrada + cajitas místicas animadas alrededor.
+// Diagrama: FOTO REAL de la mano + líneas trazadas sobre las líneas reales
+// (ancladas a los 21 puntos de MediaPipe; si no hay detección, patrón genérico).
 function dibujarManoCanvas(dataUrl, lineas){
   const cvn = $('#res-canvas'); if(!cvn) return;
   const token = ++_animToken;
   const L = lineas || [];
   const colores = L.map(l => PALETA[(l.color||'').toLowerCase()] || PALETA.dorado);
-  const pts = _puntosMano(), edges = _aristas(pts, 3);
-  const fases = pts.map((_,i) => (i*1.7) % 6.283);
-  const palmas = lineasVariadas();   // trazos con variación (no siempre iguales)
   const img = new Image(); let imgOK=false; img.onload = () => { imgOK = true; }; if(dataUrl) img.src = dataUrl;
 
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   const cssW = cvn.clientWidth || 320, cssH = cvn.clientHeight || cssW;
   cvn.width = Math.round(cssW*dpr); cvn.height = Math.round(cssH*dpr);
   const ctx = cvn.getContext('2d'), W = cvn.width, H = cvn.height;
-  // Mano centrada de tamaño medio (deja sitio a las cajitas).
-  function P(p){ const hh = 0.57*H, hw = hh*(66/107), ox = (W-hw)/2, oy = 0.15*H; return [ ox + ((p[0]-14)/66)*hw, oy + ((p[1]-15)/107)*hh ]; }
-  const sil = SILUETA.map(P);
+  const lerp = (a,b,t)=>[a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t];
+
+  // Rect de la foto dentro del canvas (modo "contain", sin recortar la mano).
+  function contain(){ if(!imgOK || !img.width) return {dx:0,dy:0,dw:W,dh:H};
+    const ir=img.width/img.height, cr=W/H; let dw,dh;
+    if(ir>cr){ dw=W; dh=W/ir; } else { dh=H; dw=H*ir; }
+    return { dx:(W-dw)/2, dy:(H-dh)/2, dw, dh }; }
+
+  // Las 4 líneas mayores, ancladas a la mano REAL detectada (o patrón genérico).
+  function construirLineas(d){
+    const lm = estado.landmarks;
+    if(lm && lm.length >= 18){
+      const g = i => [ d.dx + lm[i].x*d.dw, d.dy + lm[i].y*d.dh ];
+      const wrist=g(0), thumb=g(2), idx=g(5), mid=g(9), pinky=g(17);
+      const center=[ (wrist[0]+idx[0]+pinky[0])/3, (wrist[1]+idx[1]+pinky[1])/3 ];
+      const vida    = _quad(lerp(idx,thumb,0.45), lerp(thumb,center,0.25), lerp(wrist,thumb,0.45), 46); // rodea el pulgar
+      const cabeza  = _quad(lerp(idx,thumb,0.5),  center,                  lerp(center,pinky,0.7),  46); // cruza la palma
+      const corazon = _quad(lerp(pinky,center,0.3), lerp(center,mid,-0.18), lerp(idx,mid,0.5),       46); // arco superior
+      const destino = _quad(wrist, center, lerp(center,mid,0.7), 46);                                     // vertical al medio
+      return [vida, corazon, cabeza, destino];
+    }
+    // Sin detección: plantilla mapeada sobre la foto (aproximada).
+    const m = (x,y) => [ d.dx + (x/100)*d.dw, d.dy + (y/133)*d.dh ];
+    return BASE_LINEAS.map(b => _quad(m(b.p0[0],b.p0[1]), m(b.c[0],b.c[1]), m(b.p2[0],b.p2[1]), 46));
+  }
 
   const inicio = performance.now();
   function frame(now){
     if(token !== _animToken) return;
-    const t = now - inicio, T = t/1000, apar = clamp01(t/1500);
+    const t = now - inicio, T = t/1000;
+    const d = contain();
+    const palmas = construirLineas(d);
 
-    // Fondo + foto muy tenue
+    // Fondo + FOTO REAL (sin filtro azul; leve oscurecido para que resalten las líneas)
     ctx.globalCompositeOperation = 'source-over';
-    ctx.fillStyle = '#06102e'; ctx.fillRect(0,0,W,H);
-    if(imgOK){ const cov = _coverDims(img.width, img.height, W, H); ctx.save(); ctx.globalAlpha = 0.14; ctx.drawImage(img, cov.dx, cov.dy, cov.dw, cov.dh); ctx.restore(); }
+    ctx.fillStyle = '#070617'; ctx.fillRect(0,0,W,H);
+    if(imgOK){
+      ctx.drawImage(img, d.dx, d.dy, d.dw, d.dh);
+      const og = ctx.createLinearGradient(0,0,0,H); og.addColorStop(0,'rgba(6,5,20,.22)'); og.addColorStop(1,'rgba(6,5,20,.5)');
+      ctx.fillStyle = og; ctx.fillRect(0,0,W,H);
+    }
 
-    // Silueta de la mano (forma oscura con borde cian)
-    ctx.beginPath(); ctx.moveTo(sil[0][0], sil[0][1]); for(let i=1;i<sil.length;i++) ctx.lineTo(sil[i][0], sil[i][1]); ctx.closePath();
-    ctx.save(); ctx.fillStyle = 'rgba(4,10,28,0.6)'; ctx.fill();
-    ctx.strokeStyle = 'rgba(90,224,255,0.45)'; ctx.lineWidth = Math.max(1, W*0.003); ctx.shadowColor = '#5BE0FF'; ctx.shadowBlur = W*0.016; ctx.stroke(); ctx.restore();
+    // Líneas de la palma en su color (se dibujan sobre las líneas reales de la foto)
+    palmas.forEach((pl,i)=>{ const f=clamp01((t-300 - i*200)/700); _trazarPx(ctx, pl, colores[i]||'#EBC878', Math.max(2.6, W*0.013), f, true);
+      if(f>0.25){ [pl[0], pl[pl.length-1]].forEach(p=>{ ctx.save(); ctx.fillStyle='#fff'; ctx.shadowColor=colores[i]||'#EBC878'; ctx.shadowBlur=W*0.02; ctx.beginPath(); ctx.arc(p[0],p[1],W*0.006,0,7); ctx.fill(); ctx.restore(); }); }
+    });
 
-    // Malla de puntos (brillo aditivo)
-    ctx.globalCompositeOperation = 'lighter';
-    ctx.strokeStyle = 'rgba(70,200,255,0.20)'; ctx.lineWidth = Math.max(0.5, W*0.0014);
-    const ne = Math.floor(edges.length*apar);
-    for(let i=0;i<ne;i++){ const a=P(pts[edges[i][0]]), b=P(pts[edges[i][1]]); ctx.beginPath(); ctx.moveTo(a[0],a[1]); ctx.lineTo(b[0],b[1]); ctx.stroke(); }
-    const nn = Math.floor(pts.length*apar);
-    for(let i=0;i<nn;i++){ const p=P(pts[i]); const tw=0.55+0.45*Math.sin(T*2+fases[i]);
-      ctx.fillStyle = 'rgba(150,235,255,'+(0.35+0.4*tw)+')'; ctx.shadowColor = '#5BE0FF'; ctx.shadowBlur = W*0.005*tw;
-      ctx.beginPath(); ctx.arc(p[0], p[1], Math.max(0.5, W*0.0024), 0, 7); ctx.fill(); }
-    ctx.shadowBlur = 0;
-    // Destellos en las yemas
-    TIPS.forEach((tp,i)=>{ const f=clamp01((t-400 - i*110)/380); if(f<=0) return; const c=P(tp.p); const pr=0.7+0.3*Math.sin(T*2.5+i);
-      ctx.fillStyle='rgba(160,238,255,'+(f*0.9)+')'; ctx.shadowColor='#5BE0FF'; ctx.shadowBlur=W*0.012*pr; ctx.beginPath(); ctx.arc(c[0],c[1],W*0.005,0,7); ctx.fill(); });
-    ctx.shadowBlur = 0;
-
-    // Líneas de la palma en su color
-    palmas.forEach((pl,i)=>{ const f=clamp01((t-1100 - i*160)/480); _trazarPx(ctx, pl.map(P), colores[i]||'#EBC878', Math.max(2.4, W*0.012), f, true); });
-
-    // Cajitas místicas + líneas guía animadas
-    ctx.globalCompositeOperation = 'source-over';
+    // Cajitas + líneas guía hacia cada línea real
     const boxes = [];
     L.forEach((l,i)=>{ const cfg = CALLOUT[i]; if(!cfg) return;
-      const f = clamp01((t-1500 - i*220)/560); if(f<=0) return;
+      const f = clamp01((t-900 - i*220)/560); if(f<=0) return;
       const col = colores[i] || '#EBC878';
       const pulse = 0.55 + 0.45*Math.sin(T*2.2 + i*1.4);
-      const bw = W*0.29, bh = W*0.12, bcx = cfg.box[0]*W, bcy = cfg.box[1]*H, bx = bcx-bw/2, by = bcy-bh/2;
+      const bw = W*0.30, bh = W*0.12, bcx = cfg.box[0]*W, bcy = cfg.box[1]*H, bx = bcx-bw/2, by = bcy-bh/2;
       const izq = cfg.box[0] < 0.5;
-      const ap = palmas[i] ? palmas[i][Math.floor(palmas[i].length*0.5)] : cfg.anchor;   // punto real del trazo
-      const anc = P(ap);
+      const anc = palmas[i] ? palmas[i][Math.floor(palmas[i].length*0.5)] : [bcx,bcy];
       const sxp = izq ? bx+bw : bx;
       ctx.save(); ctx.globalAlpha = f;
-      // línea guía con resplandor + nodo en la palma
       ctx.strokeStyle = col; ctx.lineWidth = Math.max(1.4, W*0.004); ctx.shadowColor = col; ctx.shadowBlur = W*0.01*(0.6+pulse);
       ctx.beginPath(); ctx.moveTo(sxp, bcy); ctx.lineTo(anc[0], anc[1]); ctx.stroke();
       ctx.beginPath(); ctx.arc(anc[0], anc[1], W*0.008*(0.8+0.4*Math.sin(T*3+i)), 0, 7); ctx.fillStyle = col; ctx.shadowBlur = W*0.02; ctx.fill();
-      // pulso viajando por la línea guía
       const tt = (T*0.45 + i*0.27) % 1, px = sxp+(anc[0]-sxp)*tt, py = bcy+(anc[1]-bcy)*tt;
       ctx.beginPath(); ctx.arc(px, py, W*0.0035, 0, 7); ctx.fillStyle = '#fff'; ctx.fill(); ctx.shadowBlur = 0;
-      // cajita: relleno degradado + borde brillante pulsante
-      const g = ctx.createLinearGradient(bx, by, bx, by+bh); g.addColorStop(0,'rgba(18,28,66,0.92)'); g.addColorStop(1,'rgba(8,14,38,0.92)');
+      const g = ctx.createLinearGradient(bx, by, bx, by+bh); g.addColorStop(0,'rgba(18,28,66,0.94)'); g.addColorStop(1,'rgba(8,14,38,0.94)');
       _rrect(ctx, bx, by, bw, bh, W*0.026); ctx.fillStyle = g; ctx.fill();
       ctx.lineWidth = Math.max(1.5, W*0.0045); ctx.strokeStyle = col; ctx.shadowColor = col; ctx.shadowBlur = W*0.022*pulse; ctx.stroke(); ctx.shadowBlur = 0;
-      // nombre en tipografía display
       const nm = (l.nombre||'').replace(/^L[ií]nea (de la |del |de )/i,'');
       ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.font = '700 ' + Math.max(12, W*0.036) + 'px "Playfair Display", serif';
@@ -976,32 +1239,21 @@ function dibujarManoCanvas(dataUrl, lineas){
   requestAnimationFrame(frame);
 }
 
-// Muestra el resumen o el detalle de una línea en la caja de descripción.
-function showResumen(){
-  const a = estado.lectura || {};
-  $('#desc-tit').textContent = 'Tu lectura ✋'; $('#desc-tit').style.color = 'var(--oro-suave)';
-  let txt = a.saludo || '';
-  if(a.montes) txt += '\n\n' + a.montes;
-  if(a.cierre) txt += '\n\n' + a.cierre;
-  txt += '\n\n✦ Toca cada línea de la mano para ver su significado.';
-  $('#desc-texto').textContent = txt.trim();
-}
-function showDesc(idx){
-  const a = estado.lectura || {}, l = (a.lineas||[])[idx]; if(!l) return;
-  const col = PALETA[(l.color||'').toLowerCase()] || '#EBC878';
-  const tit = $('#desc-tit'); tit.textContent = (l.simbolo ? l.simbolo+' ' : '') + (l.nombre||''); tit.style.color = col;
-  $('#desc-texto').textContent = (l.observacion ? l.observacion + ' ' : '') + (l.lectura||'');
+// Al tocar una caja del croquis, resalta la tarjeta de esa línea y la trae a la vista.
+function resaltarCard(idx){
+  const el = document.getElementById('lc-'+idx); if(!el) return;
+  el.scrollIntoView({ behavior:'smooth', block:'center' });
+  el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
 }
 $('#res-canvas').addEventListener('click', (e) => {
   const cvn = $('#res-canvas'), r = cvn.getBoundingClientRect();
   const x = (e.clientX-r.left)*(cvn.width/r.width), y = (e.clientY-r.top)*(cvn.height/r.height);
-  for(const b of _boxesHit){ if(x>=b.x && x<=b.x+b.w && y>=b.y && y<=b.y+b.h){ showDesc(b.idx); return; } }
-  showResumen();
+  for(const b of _boxesHit){ if(x>=b.x && x<=b.x+b.w && y>=b.y && y<=b.y+b.h){ resaltarCard(b.idx); return; } }
 });
 
 /* ====================== NUEVA LECTURA ====================== */
 function nuevaLectura(){
-  try{ speechSynthesis.cancel(); }catch(e){}
+  detenerVoz();
   fondoMusica(false);
   _animToken++;   // detiene el bucle del canvas
   estado.lectura = null; estado.dataUrl = '';
@@ -1028,35 +1280,66 @@ function abrirRecibir(){ $('#recibir-estado').textContent=''; $('#modal-recibir'
 $('#btn-recibir').addEventListener('click', abrirRecibir);
 $('#btn-recibir2').addEventListener('click', abrirRecibir);
 $('#btn-recibir-cerrar').addEventListener('click', () => $('#modal-recibir').classList.remove('activo'));
-$('#btn-google').addEventListener('click', async () => {
+// Normaliza el celular a formato internacional para wa.me (Colombia: 10 dígitos → +57).
+function telWhatsApp(cel){
+  let d = (cel || '').replace(/\D/g, '');
+  if(!d) return '';
+  if(d.length === 10) d = '57' + d;   // celular colombiano sin indicativo
+  return d;
+}
+$('#btn-whatsapp').addEventListener('click', () => {
   const est = $('#recibir-estado');
-  try{
-    est.textContent = 'Conectando con Google…';
-    const u = await window.iniciarSesionGoogle();
-    est.textContent = 'Enviando tu predicción a ' + u.email + '…';
-    const r = await postJSON('/api/enviar', {
-      idToken: u.idToken, nombre: u.nombre || estado.nombre,
-      prediccion: compilarPrediccion(), modo: estado.modo
-    });
-    est.textContent = r.enviado
-      ? '✨ ¡Enviada a ' + (r.correo || u.email) + '! Revisa tu correo.'
-      : '✨ ¡Registrada para ' + (r.correo || u.email) + '! ' + (r.nota || '');
-  }catch(e){ est.textContent = 'No se pudo: ' + e.message; }
+  const tel = telWhatsApp(estado.cel);
+  const intro = '🔮 *Quiromancia AI · Divergency*\nTu lectura completa, ' + (estado.nombre || '') + ':\n\n';
+  const texto = intro + compilarPrediccion();
+  const url = (tel ? 'https://wa.me/' + tel : 'https://wa.me/') + '?text=' + encodeURIComponent(texto);
+  window.open(url, '_blank');
+  est.textContent = tel ? '✨ Abriendo WhatsApp para enviarte tu lectura completa…' : '✨ Abriendo WhatsApp…';
 });
 
-/* ---------- Voz del oráculo (TTS): lee la lectura en voz alta ---------- */
+/* ---------- Voz del oráculo: ElevenLabs (voz mística) con respaldo del navegador ---------- */
+let vozAudio = null;   // <audio> actual de ElevenLabs
+let vozToken = 0;      // cancela peticiones/playback obsoletos
+
+function detenerVoz(){
+  vozToken++;
+  try{ if(vozAudio){ vozAudio.pause(); vozAudio.src=''; vozAudio=null; } }catch(e){}
+  try{ speechSynthesis.cancel(); }catch(e){}
+}
+
 $('#btn-tts').addEventListener('click', () => {
   estado.tts = !estado.tts;
   $('#btn-tts').classList.toggle('on', estado.tts);
   if(estado.tts){ hablar(compilarPrediccion()); }
-  else { try{ speechSynthesis.cancel(); }catch(e){} }
+  else { detenerVoz(); }
 });
-function hablar(texto, alTerminar){
-  if(!estado.tts || !texto || !('speechSynthesis' in window)) return;
+
+// Genera la voz con ElevenLabs (en el backend) y la reproduce. Si falla, usa la voz del navegador.
+async function hablar(texto, alTerminar){
+  if(!estado.tts || !texto) return;
+  detenerVoz();
+  const token = ++vozToken;
+  try{
+    const data = await postJSON('/api/voz', { texto, modo: estado.modo });
+    if(token !== vozToken || !estado.tts) return;             // se canceló mientras se generaba
+    if(!data || !data.audio) throw new Error('sin audio');
+    const audio = new Audio('data:' + (data.mime || 'audio/mpeg') + ';base64,' + data.audio);
+    vozAudio = audio;
+    if(typeof alTerminar === 'function') audio.onended = () => { if(token === vozToken) alTerminar(); };
+    audio.play().catch(() => hablarNavegador(texto, alTerminar));
+  }catch(e){
+    if(token !== vozToken || !estado.tts) return;
+    hablarNavegador(texto, alTerminar);                        // respaldo: voz del navegador
+  }
+}
+
+// Respaldo si ElevenLabs no está disponible (clave no configurada, sin red, etc.).
+function hablarNavegador(texto, alTerminar){
+  if(!estado.tts || !texto || !('speechSynthesis' in window)){ if(typeof alTerminar==='function') alTerminar(); return; }
   try{
     speechSynthesis.cancel();
     const u=new SpeechSynthesisUtterance(texto);
-    u.lang='es-ES'; u.rate=0.98;
+    u.lang='es-ES'; u.rate=0.96;
     u.pitch = estado.modo==='mistico'?0.9 : estado.modo==='burlon'?1.1 : 1.0;
     if(typeof alTerminar === 'function') u.onend = alTerminar;
     speechSynthesis.speak(u);
@@ -1070,6 +1353,7 @@ function entrarApp(){
   const audio = $('#intro-audio');
   try{ audio.volume = 0.7; audio.currentTime = 0; const p = audio.play(); if(p && p.catch) p.catch(()=>{}); }catch(e){}
   $('#pantalla-intro').classList.add('saliendo');
+  const fx = document.getElementById('intro-fx'); if(fx) fx.classList.add('oculto');
   setTimeout(() => { mostrar('home'); desvanecerAudio(audio, 4500); }, 1050);
 }
 function desvanecerAudio(audio, dur){
