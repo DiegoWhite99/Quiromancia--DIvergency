@@ -50,8 +50,8 @@ const server = createServer(async (req, res) => {
   const ruta = url.pathname;
 
   // ---- API ----
-  if (req.method === 'POST' && ruta === '/api/chat') {
-    const r = await handlers.handleChat(await leerBody(req)); return enviar(res, r.status, r.data);
+  if (req.method === 'POST' && ruta === '/api/lectura') {
+    const r = await handlers.handleLectura(await leerBody(req)); return enviar(res, r.status, r.data);
   }
   if (req.method === 'POST' && ruta === '/api/transcribe') {
     const r = await handlers.handleTranscribe(await leerBody(req)); return enviar(res, r.status, r.data);

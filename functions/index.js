@@ -23,9 +23,9 @@ app.use(express.json({ limit: '12mb' }));
 
 const router = express.Router();
 
-router.post('/chat', async (req, res) => {
-  try { const r = await h.handleChat(req.body || {}); res.status(r.status).json(r.data); }
-  catch (e) { logger.error('chat', e); res.status(500).json({ error: e.message }); }
+router.post('/lectura', async (req, res) => {
+  try { const r = await h.handleLectura(req.body || {}); res.status(r.status).json(r.data); }
+  catch (e) { logger.error('lectura', e); res.status(500).json({ error: e.message }); }
 });
 
 router.post('/transcribe', async (req, res) => {

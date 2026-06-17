@@ -224,17 +224,11 @@
   .btn-google:active{ transform:translateY(2px); }
   .recibir-estado{ font-size:14px; color:var(--oro-suave); min-height:20px; margin:12px 0 4px; line-height:1.5; }
 
-  /* ---------- Chat ---------- */
-  #pantalla-chat{ height:100%; gap:14px; }
-  .chat-top{ display:flex; gap:14px; align-items:center; }
-  .mano-mini{ width:92px; height:118px; border-radius:16px; overflow:hidden; position:relative; flex:none;
-    border:1px solid var(--card-borde); box-shadow:0 14px 30px -16px #000; }
-  .mano-mini img{ width:100%; height:100%; object-fit:cover; }
-  .mano-mini svg{ position:absolute; inset:0; }
-  .mano-mini .borde path{ fill:none; stroke:var(--oro); stroke-width:1.6; opacity:.85; stroke-dasharray:5 6; animation:girar 16s linear infinite; }
-  .mano-mini .linea{ fill:none; stroke:var(--azul-claro); stroke-width:1.4; opacity:.8; stroke-linecap:round; }
-  .chat-top .info{ flex:1; min-width:0; }
-  .chat-nombre{ font-family:var(--display); font-weight:700; font-size:19px; color:var(--texto); margin-top:4px; line-height:1.1;
+  /* ---------- Resultado (mano dibujada + líneas) ---------- */
+  #pantalla-resultado{ height:100%; gap:12px; }
+  .res-head{ display:flex; gap:12px; align-items:flex-start; }
+  .res-head .info{ flex:1; min-width:0; }
+  .chat-nombre{ font-family:var(--display); font-weight:700; font-size:20px; color:var(--texto); margin-top:4px; line-height:1.1;
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .chips{ display:flex; gap:6px; flex-wrap:wrap; margin-top:6px; }
   .chip{ display:inline-block; font-size:11.5px; font-weight:600; letter-spacing:.04em; color:var(--oro-suave);
@@ -244,27 +238,35 @@
     border-radius:50%; cursor:pointer; font-size:18px; flex:none; transition:all .18s; }
   .icon-btn.on{ color:var(--oro); border-color:rgba(235,200,120,.5); }
 
-  .mensajes{ flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; display:flex; flex-direction:column; gap:12px; padding:4px 2px; }
-  .msg{ max-width:88%; padding:13px 16px; border-radius:18px; font-size:15.5px; line-height:1.56; white-space:pre-wrap; animation:fade .35s ease both; }
-  .msg.bot{ align-self:flex-start; background:var(--card); border:1px solid var(--card-borde); border-bottom-left-radius:6px; }
-  .msg.user{ align-self:flex-end; background:linear-gradient(135deg,var(--azul),var(--azul-claro)); color:#fff; border-bottom-right-radius:6px; }
-  .msg.pensando{ color:var(--texto-mute); font-style:italic; }
-
-  .chat-foot{ display:flex; flex-direction:column; align-items:center; gap:12px; }
-  .mic-btn{ width:78px; height:78px; border-radius:50%; border:none; cursor:pointer; color:#fff; font-size:30px;
-    background:linear-gradient(135deg, var(--azul), var(--azul-claro));
-    box-shadow:0 0 0 6px rgba(91,91,255,.12), 0 14px 34px -10px rgba(33,33,222,.8); transition:transform .12s; }
-  .mic-btn:active{ transform:scale(.93); }
-  .mic-btn.grabando{ background:linear-gradient(135deg,#e23b6d,#ff5c8a); animation:pulso 1.1s ease-in-out infinite; }
-  @keyframes pulso{ 0%,100%{ box-shadow:0 0 0 6px rgba(255,92,138,.18), 0 14px 34px -10px rgba(226,59,109,.8) }
-    50%{ box-shadow:0 0 0 16px rgba(255,92,138,.05), 0 14px 34px -10px rgba(226,59,109,.9) } }
-  .mic-estado{ font-size:13px; color:var(--texto-mute); min-height:16px; }
-  .entrada{ display:flex; gap:10px; width:100%; }
-  .entrada input{ flex:1; font-family:var(--cuerpo); font-size:16px; color:var(--texto);
-    background:rgba(255,255,255,.06); border:1.5px solid var(--card-borde); border-radius:16px; padding:14px 16px; outline:none; }
-  .entrada input:focus{ border-color:var(--azul-claro); }
-  .enviar{ width:52px; height:52px; flex:none; border-radius:16px; border:none; cursor:pointer; color:#fff; font-size:18px;
-    background:linear-gradient(135deg,var(--azul),var(--azul-claro)); }
+  .res-scroll{ flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; display:flex; flex-direction:column; gap:14px; padding:2px 2px 4px; }
+  .res-mapa{ position:relative; width:100%; max-width:560px; aspect-ratio:1/1; margin:0 auto; flex-shrink:0; border-radius:20px; overflow:hidden;
+    background:radial-gradient(circle at 50% 42%, #0c1b46, #06102e 70%); border:1px solid rgba(91,160,255,.25);
+    box-shadow:0 22px 55px -32px #000, 0 0 34px -8px rgba(91,200,255,.35); }
+  #res-canvas{ display:block; width:100%; height:100%; cursor:pointer; }
+  .res-desc{ padding:16px 18px; }
+  .res-desc-tit{ font-family:var(--display); font-weight:700; font-size:18px; margin-bottom:6px; color:var(--oro-suave); }
+  .res-desc p{ margin:0; font-size:15px; line-height:1.62; color:#ddddf5; }
+  .trazos-res{ position:absolute; inset:0; width:100%; height:100%; }
+  /* croquis (silueta) de la mano */
+  .trazos-res .croquis{ fill:rgba(255,255,255,.03); stroke:rgba(255,255,255,.62); stroke-width:1.5; vector-effect:non-scaling-stroke;
+    stroke-linejoin:round; stroke-linecap:round; filter:drop-shadow(0 0 3px rgba(255,255,255,.45)); stroke-dasharray:100; stroke-dashoffset:100; }
+  .res-foto-wrap.dibujar .croquis{ animation:dibujarFijo 1.7s ease forwards; }
+  /* líneas de la palma (coloreadas por JS) */
+  .trazos-res .traza-res{ fill:none; stroke:var(--oro); stroke-width:2.6; vector-effect:non-scaling-stroke; stroke-linecap:round;
+    filter:drop-shadow(0 0 4px var(--oro)); stroke-dasharray:100; stroke-dashoffset:100; }
+  .res-foto-wrap.dibujar .traza-res{ animation:dibujarFijo 1.4s ease forwards; }
+  @keyframes dibujarFijo{ to{ stroke-dashoffset:0 } }
+  .trazos-res .nodo-res{ fill:#fff; opacity:0; filter:drop-shadow(0 0 4px var(--oro)); }
+  .res-foto-wrap.dibujar .nodo-res{ animation:apareceNodo .5s ease forwards; }
+  @keyframes apareceNodo{ to{ opacity:.95 } }
+  .res-saludo{ text-align:center; font-style:italic; color:var(--oro-suave); font-size:17px; line-height:1.5; }
+  .bloque{ padding:18px 20px; animation:fade .45s ease both; }
+  .bloque h3{ font-size:18px; margin:0 0 7px; display:flex; align-items:center; gap:9px; color:var(--texto); }
+  .bloque h3 .ico{ font-size:21px; }
+  .bloque p{ margin:0; font-size:15.5px; line-height:1.62; color:#ddddf5; }
+  .bloque .obs{ margin:0 0 9px; font-size:13.5px; font-style:italic; color:var(--texto-mute); line-height:1.5; }
+  .res-cierre{ text-align:center; font-style:italic; color:var(--oro-suave); font-size:15.5px; line-height:1.6; padding:4px 8px; }
+  .res-actions{ display:flex; gap:12px; }
 
   .err{ color:#ff9b9b; font-size:14px; min-height:18px; text-align:center; }
   .nota{ font-size:12px; color:var(--texto-mute); text-align:center; }
@@ -428,38 +430,35 @@
     <p id="estado-analisis">Subiendo la imagen de tu palma</p>
   </section>
 
-  <!-- ============ CHAT ============ -->
-  <section class="screen" id="pantalla-chat">
-    <div class="chat-top">
-      <div class="mano-mini">
-        <img id="mano-foto" alt="" />
-        <svg viewBox="0 0 100 133" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-          <g class="borde"><path d="M33 120 L30 96 C28 86 18 80 14 73 C10 68 13 63 19 63 C25 63 31 66 31 60 L31 31 Q31 26 36 26 Q41 26 41 31 L41 57 Q43 60 45 57 L45 21 Q45 16 50 16 Q55 16 55 21 L55 56 Q57 59 59 56 L59 25 Q59 20 64 20 Q68 20 68 25 L68 58 Q70 61 71 58 L71 40 Q71 35 76 35 Q80 35 80 41 L78 96 L74 120 Z"/></g>
-          <path class="linea" d="M37 72 Q52 64 69 69"/><path class="linea" d="M35 84 Q52 82 66 88"/><path class="linea" d="M38 66 Q31 92 45 113"/>
-        </svg>
-      </div>
+  <!-- ============ RESULTADO (mano dibujada + líneas) ============ -->
+  <section class="screen" id="pantalla-resultado">
+    <div class="res-head">
       <div class="info">
-        <div class="marca" style="justify-content:flex-start">Divergency</div>
-        <div class="chat-nombre" id="chat-nombre"></div>
+        <div class="marca" style="justify-content:flex-start">Divergency · Tu lectura</div>
+        <div class="chat-nombre" id="res-nombre"></div>
         <div class="chips">
           <span class="chip" id="chip-modo">Oráculo</span>
           <span class="chip" id="chip-lectura"></span>
         </div>
       </div>
-      <button class="icon-btn on" id="btn-tts" title="Voz del oráculo">🔊</button>
+      <button class="icon-btn on" id="btn-tts" title="Leer en voz alta">🔊</button>
       <button class="icon-btn" id="btn-recibir" title="Recibir mi predicción por correo">📩</button>
       <button class="icon-btn" id="btn-reiniciar" title="Nueva lectura">↺</button>
     </div>
 
-    <div class="mensajes" id="mensajes"></div>
-
-    <div class="chat-foot">
-      <button class="mic-btn" id="btn-mic" title="Hablar">🎤</button>
-      <div class="mic-estado" id="mic-estado">Toca el micrófono para preguntar</div>
-      <div class="entrada">
-        <input id="in-pregunta" type="text" placeholder="O escribe tu pregunta..." autocomplete="off" />
-        <button class="enviar" id="btn-enviar" aria-label="Enviar">➤</button>
+    <div class="res-scroll">
+      <div class="res-mapa" id="res-foto-wrap">
+        <canvas id="res-canvas"></canvas>
       </div>
+      <div class="glass res-desc" id="res-desc">
+        <div class="res-desc-tit" id="desc-tit">Tu lectura</div>
+        <p id="desc-texto">Toca una línea de la mano para ver su significado.</p>
+      </div>
+    </div>
+
+    <div class="res-actions">
+      <button class="btn fantasma" id="btn-reiniciar2">↺ Nueva</button>
+      <button class="btn oro" id="btn-recibir2">📩 Recibir por correo</button>
     </div>
     <audio id="bg-audio" src="mp3/dragon.mp3" loop preload="auto"></audio>
   </section>
@@ -532,17 +531,18 @@
    ============================================================ */
 
 const MODOS_UI = { serio:'Modo Serio', mistico:'Oráculo de Delfos', burlon:'Modo Burlón' };
+// Color por significado de la línea
+const PALETA = { verde:'#54E08A', azul:'#5B9BFF', rosa:'#FF6FB5', dorado:'#EBC878', morado:'#B083FF', rojo:'#FF6B6B' };
 
 const estado = {
   modo:'mistico', nombre:'', correo:'', cel:'', mano:'derecha', fecha:'', anio:'', tema:'', signo:'', flipManual:false, mirror:false,
-  dataUrl:'', stream:null, conversacion:[], tts:true,
-  grabando:false, mediaRecorder:null, micStream:null, chunks:[]
+  dataUrl:'', stream:null, lectura:null, tts:true
 };
 
 const $ = (s) => document.querySelector(s);
 const pantallas = {
   intro:$('#pantalla-intro'), home:$('#pantalla-home'), form:$('#pantalla-form'), camara:$('#pantalla-camara'),
-  analisis:$('#pantalla-analisis'), chat:$('#pantalla-chat')
+  analisis:$('#pantalla-analisis'), resultado:$('#pantalla-resultado')
 };
 function mostrar(id){
   Object.values(pantallas).forEach(p => p.classList.remove('activo'));
@@ -741,46 +741,41 @@ async function iniciarLectura(){
   mostrar('analisis');
   $('#img-analisis').src = estado.dataUrl;
   cicloEstados();
-
-  const intro = `Soy ${estado.nombre || 'una persona'} y esta es la palma de mi mano ${estado.mano}.`
-    + (estado.fecha ? ` Nací el ${estado.fecha}.` : '')
-    + (estado.signo ? ` Mi signo zodiacal es ${estado.signo}.` : '')
-    + (estado.tema ? ` Me interesa especialmente: ${estado.tema}.` : '')
-    + ` Observa la fotografía y entrégame mi lectura inicial de quiromancia, en tu estilo, en 2 o 3 párrafos. Al final, invítame a preguntarte lo que quiera.`;
-
-  estado.conversacion = [{
-    role:'user',
-    content:[ { type:'text', text:intro }, { type:'image_url', image_url:{ url:estado.dataUrl } } ]
-  }];
-
   try{
-    const { reply } = await postJSON('/api/chat', { modo:estado.modo, messages:estado.conversacion });
-    estado.conversacion.push({ role:'assistant', content:reply });
-    estado.lecturaInicial = reply;
+    const { lectura } = await postJSON('/api/lectura', {
+      modo:estado.modo, nombre:estado.nombre, mano:estado.mano, tema:estado.tema, dataUrl:estado.dataUrl
+    });
+    estado.lectura = lectura || {};
     registrarLectura(estado.correo);   // cuenta para el límite de 3 por usuario
   }catch(e){
-    estado.lecturaInicial = '__ERROR__' + e.message;
+    estado.lectura = { error: e.message };
   }
   detenerCiclo();
   $('#modal-disclaimer').classList.add('activo');
 }
 
-/* ====================== DISCLAIMER → CHAT ====================== */
+/* ====================== DISCLAIMER → RESULTADO ====================== */
 $('#btn-aceptar').addEventListener('click', () => {
   $('#modal-disclaimer').classList.remove('activo');
-  prepararChat();
-  mostrar('chat');
+  renderResultado();
+  mostrar('resultado');
   fondoMusica(true);   // música suave de fondo durante la lectura
-  const txt = estado.lecturaInicial || '';
-  if(txt.startsWith('__ERROR__')){
-    addMensaje('bot', 'Las brumas no se despejaron... ' + txt.replace('__ERROR__','') + '\n\nToca ↺ para intentar una nueva lectura.');
-  }else{
-    addMensaje('bot', txt);
-    hablar(txt);
-    // Si esta fue la última lectura permitida, ofrece recibirla por correo.
-    if(lecturasDe(estado.correo) >= 3){ setTimeout(abrirRecibir, 4000); }
+  estado.recibirOfrecido = false;
+  if(!(estado.lectura && estado.lectura.error)){
+    const txt = compilarPrediccion();
+    hablar(txt, ofrecerRecibir);   // si la voz está activa, ofrece el correo al TERMINAR de leerla
+    // Respaldo: si no hay voz (o no dispara), ofrece tras un tiempo prudente.
+    setTimeout(ofrecerRecibir, estado.tts ? 75000 : 16000);
   }
 });
+
+// Ofrece enviar la predicción por correo (una sola vez, cuando la lectura ya terminó).
+function ofrecerRecibir(){
+  if(estado.recibirOfrecido) return;
+  if(!pantallas.resultado.classList.contains('activo')) return;
+  estado.recibirOfrecido = true;
+  abrirRecibir();
+}
 
 // Música de fondo suave (no compite con la voz del oráculo).
 function fondoMusica(activar){
@@ -791,67 +786,247 @@ function fondoMusica(activar){
   }catch(e){}
 }
 
-function prepararChat(){
-  $('#mano-foto').src = estado.dataUrl;
+/* ====================== RENDER DE LA LECTURA ====================== */
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function renderResultado(){
+  const a = estado.lectura || {};
+  $('#res-nombre').textContent = estado.nombre || 'Viajero';
   $('#chip-modo').textContent = MODOS_UI[estado.modo] || 'Oráculo';
-  $('#chat-nombre').textContent = estado.nombre || 'Viajero';
   const n = Math.min(3, lecturasDe(estado.correo) || 1);
-  const chipL = $('#chip-lectura');
-  chipL.textContent = 'Lectura ' + n + '/3';
-  chipL.className = 'chip lectura';
-  $('#mensajes').innerHTML = '';
+  const chipL = $('#chip-lectura'); chipL.textContent = 'Lectura ' + n + '/3'; chipL.className = 'chip lectura';
   $('#btn-tts').classList.toggle('on', estado.tts);
-}
 
-/* ====================== CHAT ====================== */
-function addMensaje(tipo, texto){
-  const cont=$('#mensajes');
-  const d=document.createElement('div'); d.className='msg '+tipo; d.textContent=texto;
-  cont.appendChild(d); cont.scrollTop=cont.scrollHeight;
-  return d;
-}
-
-async function enviarPregunta(texto){
-  texto = (texto||'').trim(); if(!texto) return;
-  addMensaje('user', texto);
-  estado.conversacion.push({ role:'user', content:texto });
-  recortarConversacion();
-
-  const pensando = addMensaje('bot pensando', 'consultando los signos…');
-  try{
-    const { reply } = await postJSON('/api/chat', { modo:estado.modo, messages:estado.conversacion });
-    pensando.remove();
-    estado.conversacion.push({ role:'assistant', content:reply });
-    addMensaje('bot', reply);
-    hablar(reply);
-  }catch(e){
-    pensando.remove();
-    addMensaje('bot', 'No pude responder ahora mismo: ' + e.message);
+  if(a.error){
+    $('#desc-tit').textContent = 'Las brumas no se despejaron';
+    $('#desc-texto').textContent = a.error + '  ·  Toca ↺ para intentar de nuevo.';
+  } else {
+    showResumen();
   }
-}
-// Mantiene la imagen inicial + las últimas ~12 intervenciones para no crecer sin límite.
-function recortarConversacion(){
-  const c = estado.conversacion;
-  if(c.length > 14){ estado.conversacion = [c[0], ...c.slice(c.length-12)]; }
+  // Dibuja el diagrama de la mano (malla + líneas de color + cajitas).
+  dibujarManoCanvas(estado.dataUrl, a.lineas || []);
 }
 
-$('#btn-enviar').addEventListener('click', () => { const v=$('#in-pregunta').value; $('#in-pregunta').value=''; enviarPregunta(v); });
-$('#in-pregunta').addEventListener('keydown', (e) => { if(e.key==='Enter'){ const v=$('#in-pregunta').value; $('#in-pregunta').value=''; enviarPregunta(v); } });
+/* ====================== CANVAS: croquis (visión por computadora) + líneas ====================== */
+const SVGNS = 'http://www.w3.org/2000/svg';
+// Croquis y líneas de RESPALDO (si OpenCV no está listo o no detecta mano), en espacio 100x133.
+const CROQUIS_D = "M33 120 L30 96 C28 86 18 80 14 73 C10 68 13 63 19 63 C25 63 31 66 31 60 L31 31 Q31 26 36 26 Q41 26 41 31 L41 57 Q43 60 45 57 L45 21 Q45 16 50 16 Q55 16 55 21 L55 56 Q57 59 59 56 L59 25 Q59 20 64 20 Q68 20 68 25 L68 58 Q70 61 71 58 L71 40 Q71 35 76 35 Q80 35 80 41 L78 96 L74 120 Z";
+const LINEAS_D = ["M41 60 Q30 86 43 113","M34 73 Q52 66 70 71","M33 83 Q52 81 67 89","M54 116 Q52 88 50 64"];
+// Curvas base de las líneas (p0, control, p2) en espacio 100x133. Se varían en cada lectura.
+const BASE_LINEAS = [
+  { p0:[41,60],  c:[30,86], p2:[43,113] },  // vida
+  { p0:[34,73],  c:[52,66], p2:[70,71]  },  // corazón
+  { p0:[33,83],  c:[52,81], p2:[67,89]  },  // cabeza
+  { p0:[54,116], c:[52,88], p2:[50,64]  }   // destino
+];
+// Genera las 4 líneas con variación aleatoria (para que no se vean siempre iguales).
+function lineasVariadas(){
+  const j = (v,a)=> v + (Math.random()*2-1)*a;
+  return BASE_LINEAS.map(b => {
+    const p0=[j(b.p0[0],3), j(b.p0[1],3.5)], p2=[j(b.p2[0],4), j(b.p2[1],5)], c=[j(b.c[0],7), j(b.c[1],7)];
+    return _quad(p0, c, p2, 46);
+  });
+}
+let _tempSvg = null, _animToken = 0;
+function _svg(){ if(!_tempSvg){ _tempSvg = document.createElementNS(SVGNS,'svg'); _tempSvg.setAttribute('viewBox','0 0 100 133'); _tempSvg.style.cssText='position:absolute;left:-9999px;width:10px;height:10px;overflow:hidden'; document.body.appendChild(_tempSvg); } return _tempSvg; }
+function muestrear(d, n){
+  const sv = _svg(); const p = document.createElementNS(SVGNS,'path'); p.setAttribute('d', d); sv.appendChild(p);
+  let L = 0; try{ L = p.getTotalLength(); }catch(e){}
+  const pts = [];
+  for(let i=0;i<=n;i++){ try{ const q = p.getPointAtLength(L*i/n); pts.push([q.x, q.y]); }catch(e){ pts.push([50,66]); } }
+  sv.removeChild(p); return pts;
+}
+function _coverDims(iw, ih, W, H){ const ir=iw/ih, cr=W/H; return ir>cr ? {dw:H*ir,dh:H,dx:(W-H*ir)/2,dy:0} : {dw:W,dh:W/ir,dx:0,dy:(H-W/ir)/2}; }
+function clamp01(x){ return x < 0 ? 0 : x > 1 ? 1 : x; }
+function _quad(p0,p1,p2,n){ const a=[]; for(let i=0;i<=n;i++){ const t=i/n,u=1-t; a.push([u*u*p0[0]+2*u*t*p1[0]+t*t*p2[0], u*u*p0[1]+2*u*t*p1[1]+t*t*p2[1]]); } return a; }
+function _trazarPx(ctx, pts, color, w, f, glow){
+  if(f<=0 || !pts || pts.length<2) return;
+  const k = Math.max(1, Math.floor(f*(pts.length-1)));
+  ctx.save();
+  ctx.lineWidth = w; ctx.strokeStyle = color; ctx.lineJoin='round'; ctx.lineCap='round';
+  if(glow){ ctx.shadowColor = color; ctx.shadowBlur = w*3; }
+  ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]);
+  for(let i=1;i<=k;i++) ctx.lineTo(pts[i][0], pts[i][1]);
+  ctx.stroke(); ctx.restore();
+}
 
-$('#btn-reiniciar').addEventListener('click', () => {
+// Yemas (espacio 100x133): nodos brillantes con etiqueta tipo escaneo, como la referencia.
+const TIPS = [
+  { p:[15,68],   lbl:'',           col:'#5BE0FF' },
+  { p:[36,26],   lbl:'Analizando', col:'#5BE0FF' },
+  { p:[50,15],   lbl:'Confirmado', col:'#54E08A' },
+  { p:[63.5,21], lbl:'Listo',      col:'#54E08A' },
+  { p:[76,36],   lbl:'',           col:'#5BE0FF' }
+];
+const SILUETA = muestrear(CROQUIS_D, 120);   // polígono del contorno (relleno de la mano)
+// Cajita de cada línea: posición (fracción del canvas) y ancla en la palma (espacio 100x133).
+const CALLOUT = [
+  { box:[0.20,0.22], anchor:[37,90] },   // Vida
+  { box:[0.80,0.20], anchor:[55,69] },   // Corazón
+  { box:[0.20,0.80], anchor:[50,86] },   // Cabeza
+  { box:[0.80,0.80], anchor:[52,100] }   // Destino
+];
+let _boxesHit = [];
+function _rrect(ctx,x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+// Nube de puntos de la mano (contorno + interior dentro de la silueta), espacio 100x133.
+function _puntosMano(){
+  const poly = SILUETA;
+  const dentro = (x,y)=>{ let c=false; for(let i=0,j=poly.length-1;i<poly.length;j=i++){ const xi=poly[i][0],yi=poly[i][1],xj=poly[j][0],yj=poly[j][1]; if(((yi>y)!==(yj>y)) && (x < (xj-xi)*(y-yi)/((yj-yi)||1e-6)+xi)) c=!c; } return c; };
+  const pts=[];
+  for(let i=0;i<poly.length;i+=2) pts.push(poly[i]);                 // contorno
+  for(let y=20;y<118;y+=6){ for(let x=12;x<82;x+=6){ const jx=x+(Math.random()*3-1.5), jy=y+(Math.random()*3-1.5); if(dentro(jx,jy)) pts.push([jx,jy]); } }
+  return pts;
+}
+function _aristas(pts, k){
+  const edges=[], seen=new Set();
+  for(let i=0;i<pts.length;i++){
+    const ds=[]; for(let j=0;j<pts.length;j++){ if(i===j) continue; const dx=pts[i][0]-pts[j][0], dy=pts[i][1]-pts[j][1]; ds.push([dx*dx+dy*dy,j]); }
+    ds.sort((a,b)=>a[0]-b[0]);
+    for(let n=0;n<k && n<ds.length;n++){ const j=ds[n][1], key=i<j?i+'_'+j:j+'_'+i; if(!seen.has(key)){ seen.add(key); edges.push([i,j]); } }
+  }
+  return edges;
+}
+
+// Mano holográfica centrada + cajitas místicas animadas alrededor.
+function dibujarManoCanvas(dataUrl, lineas){
+  const cvn = $('#res-canvas'); if(!cvn) return;
+  const token = ++_animToken;
+  const L = lineas || [];
+  const colores = L.map(l => PALETA[(l.color||'').toLowerCase()] || PALETA.dorado);
+  const pts = _puntosMano(), edges = _aristas(pts, 3);
+  const fases = pts.map((_,i) => (i*1.7) % 6.283);
+  const palmas = lineasVariadas();   // trazos con variación (no siempre iguales)
+  const img = new Image(); let imgOK=false; img.onload = () => { imgOK = true; }; if(dataUrl) img.src = dataUrl;
+
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const cssW = cvn.clientWidth || 320, cssH = cvn.clientHeight || cssW;
+  cvn.width = Math.round(cssW*dpr); cvn.height = Math.round(cssH*dpr);
+  const ctx = cvn.getContext('2d'), W = cvn.width, H = cvn.height;
+  // Mano centrada de tamaño medio (deja sitio a las cajitas).
+  function P(p){ const hh = 0.57*H, hw = hh*(66/107), ox = (W-hw)/2, oy = 0.15*H; return [ ox + ((p[0]-14)/66)*hw, oy + ((p[1]-15)/107)*hh ]; }
+  const sil = SILUETA.map(P);
+
+  const inicio = performance.now();
+  function frame(now){
+    if(token !== _animToken) return;
+    const t = now - inicio, T = t/1000, apar = clamp01(t/1500);
+
+    // Fondo + foto muy tenue
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = '#06102e'; ctx.fillRect(0,0,W,H);
+    if(imgOK){ const cov = _coverDims(img.width, img.height, W, H); ctx.save(); ctx.globalAlpha = 0.14; ctx.drawImage(img, cov.dx, cov.dy, cov.dw, cov.dh); ctx.restore(); }
+
+    // Silueta de la mano (forma oscura con borde cian)
+    ctx.beginPath(); ctx.moveTo(sil[0][0], sil[0][1]); for(let i=1;i<sil.length;i++) ctx.lineTo(sil[i][0], sil[i][1]); ctx.closePath();
+    ctx.save(); ctx.fillStyle = 'rgba(4,10,28,0.6)'; ctx.fill();
+    ctx.strokeStyle = 'rgba(90,224,255,0.45)'; ctx.lineWidth = Math.max(1, W*0.003); ctx.shadowColor = '#5BE0FF'; ctx.shadowBlur = W*0.016; ctx.stroke(); ctx.restore();
+
+    // Malla de puntos (brillo aditivo)
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.strokeStyle = 'rgba(70,200,255,0.20)'; ctx.lineWidth = Math.max(0.5, W*0.0014);
+    const ne = Math.floor(edges.length*apar);
+    for(let i=0;i<ne;i++){ const a=P(pts[edges[i][0]]), b=P(pts[edges[i][1]]); ctx.beginPath(); ctx.moveTo(a[0],a[1]); ctx.lineTo(b[0],b[1]); ctx.stroke(); }
+    const nn = Math.floor(pts.length*apar);
+    for(let i=0;i<nn;i++){ const p=P(pts[i]); const tw=0.55+0.45*Math.sin(T*2+fases[i]);
+      ctx.fillStyle = 'rgba(150,235,255,'+(0.35+0.4*tw)+')'; ctx.shadowColor = '#5BE0FF'; ctx.shadowBlur = W*0.005*tw;
+      ctx.beginPath(); ctx.arc(p[0], p[1], Math.max(0.5, W*0.0024), 0, 7); ctx.fill(); }
+    ctx.shadowBlur = 0;
+    // Destellos en las yemas
+    TIPS.forEach((tp,i)=>{ const f=clamp01((t-400 - i*110)/380); if(f<=0) return; const c=P(tp.p); const pr=0.7+0.3*Math.sin(T*2.5+i);
+      ctx.fillStyle='rgba(160,238,255,'+(f*0.9)+')'; ctx.shadowColor='#5BE0FF'; ctx.shadowBlur=W*0.012*pr; ctx.beginPath(); ctx.arc(c[0],c[1],W*0.005,0,7); ctx.fill(); });
+    ctx.shadowBlur = 0;
+
+    // Líneas de la palma en su color
+    palmas.forEach((pl,i)=>{ const f=clamp01((t-1100 - i*160)/480); _trazarPx(ctx, pl.map(P), colores[i]||'#EBC878', Math.max(2.4, W*0.012), f, true); });
+
+    // Cajitas místicas + líneas guía animadas
+    ctx.globalCompositeOperation = 'source-over';
+    const boxes = [];
+    L.forEach((l,i)=>{ const cfg = CALLOUT[i]; if(!cfg) return;
+      const f = clamp01((t-1500 - i*220)/560); if(f<=0) return;
+      const col = colores[i] || '#EBC878';
+      const pulse = 0.55 + 0.45*Math.sin(T*2.2 + i*1.4);
+      const bw = W*0.29, bh = W*0.12, bcx = cfg.box[0]*W, bcy = cfg.box[1]*H, bx = bcx-bw/2, by = bcy-bh/2;
+      const izq = cfg.box[0] < 0.5;
+      const ap = palmas[i] ? palmas[i][Math.floor(palmas[i].length*0.5)] : cfg.anchor;   // punto real del trazo
+      const anc = P(ap);
+      const sxp = izq ? bx+bw : bx;
+      ctx.save(); ctx.globalAlpha = f;
+      // línea guía con resplandor + nodo en la palma
+      ctx.strokeStyle = col; ctx.lineWidth = Math.max(1.4, W*0.004); ctx.shadowColor = col; ctx.shadowBlur = W*0.01*(0.6+pulse);
+      ctx.beginPath(); ctx.moveTo(sxp, bcy); ctx.lineTo(anc[0], anc[1]); ctx.stroke();
+      ctx.beginPath(); ctx.arc(anc[0], anc[1], W*0.008*(0.8+0.4*Math.sin(T*3+i)), 0, 7); ctx.fillStyle = col; ctx.shadowBlur = W*0.02; ctx.fill();
+      // pulso viajando por la línea guía
+      const tt = (T*0.45 + i*0.27) % 1, px = sxp+(anc[0]-sxp)*tt, py = bcy+(anc[1]-bcy)*tt;
+      ctx.beginPath(); ctx.arc(px, py, W*0.0035, 0, 7); ctx.fillStyle = '#fff'; ctx.fill(); ctx.shadowBlur = 0;
+      // cajita: relleno degradado + borde brillante pulsante
+      const g = ctx.createLinearGradient(bx, by, bx, by+bh); g.addColorStop(0,'rgba(18,28,66,0.92)'); g.addColorStop(1,'rgba(8,14,38,0.92)');
+      _rrect(ctx, bx, by, bw, bh, W*0.026); ctx.fillStyle = g; ctx.fill();
+      ctx.lineWidth = Math.max(1.5, W*0.0045); ctx.strokeStyle = col; ctx.shadowColor = col; ctx.shadowBlur = W*0.022*pulse; ctx.stroke(); ctx.shadowBlur = 0;
+      // nombre en tipografía display
+      const nm = (l.nombre||'').replace(/^L[ií]nea (de la |del |de )/i,'');
+      ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.font = '700 ' + Math.max(12, W*0.036) + 'px "Playfair Display", serif';
+      ctx.fillText((l.simbolo ? l.simbolo+' ' : '') + nm, bcx, bcy);
+      ctx.restore();
+      boxes.push({ x:bx, y:by, w:bw, h:bh, idx:i });
+    });
+    _boxesHit = boxes;
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+}
+
+// Muestra el resumen o el detalle de una línea en la caja de descripción.
+function showResumen(){
+  const a = estado.lectura || {};
+  $('#desc-tit').textContent = 'Tu lectura ✋'; $('#desc-tit').style.color = 'var(--oro-suave)';
+  let txt = a.saludo || '';
+  if(a.montes) txt += '\n\n' + a.montes;
+  if(a.cierre) txt += '\n\n' + a.cierre;
+  txt += '\n\n✦ Toca cada línea de la mano para ver su significado.';
+  $('#desc-texto').textContent = txt.trim();
+}
+function showDesc(idx){
+  const a = estado.lectura || {}, l = (a.lineas||[])[idx]; if(!l) return;
+  const col = PALETA[(l.color||'').toLowerCase()] || '#EBC878';
+  const tit = $('#desc-tit'); tit.textContent = (l.simbolo ? l.simbolo+' ' : '') + (l.nombre||''); tit.style.color = col;
+  $('#desc-texto').textContent = (l.observacion ? l.observacion + ' ' : '') + (l.lectura||'');
+}
+$('#res-canvas').addEventListener('click', (e) => {
+  const cvn = $('#res-canvas'), r = cvn.getBoundingClientRect();
+  const x = (e.clientX-r.left)*(cvn.width/r.width), y = (e.clientY-r.top)*(cvn.height/r.height);
+  for(const b of _boxesHit){ if(x>=b.x && x<=b.x+b.w && y>=b.y && y<=b.y+b.h){ showDesc(b.idx); return; } }
+  showResumen();
+});
+
+/* ====================== NUEVA LECTURA ====================== */
+function nuevaLectura(){
   try{ speechSynthesis.cancel(); }catch(e){}
   fondoMusica(false);
-  estado.conversacion=[]; estado.dataUrl=''; estado.lecturaInicial='';
+  _animToken++;   // detiene el bucle del canvas
+  estado.lectura = null; estado.dataUrl = '';
   mostrar('home');
-});
+}
+$('#btn-reiniciar').addEventListener('click', nuevaLectura);
+$('#btn-reiniciar2').addEventListener('click', nuevaLectura);
 
 /* ====================== RECIBIR PREDICCIÓN POR CORREO ====================== */
 function compilarPrediccion(){
-  const partes = (estado.conversacion || []).filter(m => m.role === 'assistant').map(m => m.content);
+  const a = estado.lectura || {}; const partes = [];
+  if(a.saludo) partes.push(a.saludo);
+  (a.lineas || []).forEach(l => {
+    let t = (l.nombre ? l.nombre + '. ' : '');
+    if(l.observacion) t += l.observacion + ' ';
+    t += (l.lectura || '');
+    partes.push(t);
+  });
+  if(a.montes) partes.push('Montes y forma de la mano. ' + a.montes);
+  if(a.cierre) partes.push(a.cierre);
   return partes.join('\n\n');
 }
 function abrirRecibir(){ $('#recibir-estado').textContent=''; $('#modal-recibir').classList.add('activo'); }
 $('#btn-recibir').addEventListener('click', abrirRecibir);
+$('#btn-recibir2').addEventListener('click', abrirRecibir);
 $('#btn-recibir-cerrar').addEventListener('click', () => $('#modal-recibir').classList.remove('activo'));
 $('#btn-google').addEventListener('click', async () => {
   const est = $('#recibir-estado');
@@ -869,68 +1044,23 @@ $('#btn-google').addEventListener('click', async () => {
   }catch(e){ est.textContent = 'No se pudo: ' + e.message; }
 });
 
-/* ---------- Voz del oráculo (TTS) ---------- */
+/* ---------- Voz del oráculo (TTS): lee la lectura en voz alta ---------- */
 $('#btn-tts').addEventListener('click', () => {
   estado.tts = !estado.tts;
   $('#btn-tts').classList.toggle('on', estado.tts);
-  if(!estado.tts){ try{ speechSynthesis.cancel(); }catch(e){} }
+  if(estado.tts){ hablar(compilarPrediccion()); }
+  else { try{ speechSynthesis.cancel(); }catch(e){} }
 });
-function hablar(texto){
-  if(!estado.tts || !('speechSynthesis' in window)) return;
+function hablar(texto, alTerminar){
+  if(!estado.tts || !texto || !('speechSynthesis' in window)) return;
   try{
     speechSynthesis.cancel();
     const u=new SpeechSynthesisUtterance(texto);
     u.lang='es-ES'; u.rate=0.98;
-    u.pitch = estado.modo==='mistico'?0.85 : estado.modo==='burlon'?1.12 : 1.0;
+    u.pitch = estado.modo==='mistico'?0.9 : estado.modo==='burlon'?1.1 : 1.0;
+    if(typeof alTerminar === 'function') u.onend = alTerminar;
     speechSynthesis.speak(u);
-  }catch(e){}
-}
-
-/* ---------- Micrófono (Whisper) ---------- */
-$('#btn-mic').addEventListener('click', toggleMic);
-async function toggleMic(){
-  if(estado.grabando){ detenerGrabacion(); return; }
-  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || typeof MediaRecorder==='undefined'){
-    $('#mic-estado').textContent='El micrófono necesita HTTPS (no disponible aquí).'; return;
-  }
-  try{
-    estado.micStream = await navigator.mediaDevices.getUserMedia({ audio:true });
-    estado.chunks=[];
-    estado.mediaRecorder = new MediaRecorder(estado.micStream);
-    estado.mediaRecorder.ondataavailable = e => { if(e.data.size>0) estado.chunks.push(e.data); };
-    estado.mediaRecorder.onstop = procesarAudio;
-    estado.mediaRecorder.start();
-    estado.grabando=true;
-    $('#btn-mic').classList.add('grabando');
-    $('#btn-mic').textContent='⏹';
-    $('#mic-estado').textContent='Grabando… toca para enviar';
-  }catch(e){ $('#mic-estado').textContent='No se pudo acceder al micrófono.'; }
-}
-function detenerGrabacion(){
-  try{ estado.mediaRecorder && estado.mediaRecorder.stop(); }catch(e){}
-  estado.grabando=false;
-  $('#btn-mic').classList.remove('grabando');
-  $('#btn-mic').textContent='🎤';
-  $('#mic-estado').textContent='Transcribiendo…';
-}
-async function procesarAudio(){
-  try{ estado.micStream.getTracks().forEach(t=>t.stop()); }catch(e){}
-  const blob = new Blob(estado.chunks, { type: (estado.mediaRecorder && estado.mediaRecorder.mimeType) || 'audio/mp4' });
-  if(!blob.size){ $('#mic-estado').textContent='No se capturó audio.'; return; }
-  try{
-    const b64 = await blobABase64(blob);
-    const { text } = await postJSON('/api/transcribe', { audio:b64, mime:blob.type });
-    $('#mic-estado').textContent='Toca el micrófono para preguntar';
-    if(text){ enviarPregunta(text); }
-    else { $('#mic-estado').textContent='No entendí, intenta de nuevo.'; }
-  }catch(e){ $('#mic-estado').textContent='Error al transcribir: ' + e.message; }
-}
-function blobABase64(blob){
-  return new Promise((res,rej)=>{
-    const fr=new FileReader();
-    fr.onload=()=>res(String(fr.result).split(',')[1]);
-    fr.onerror=rej; fr.readAsDataURL(blob);
-  });
+  }catch(e){ if(typeof alTerminar === 'function') alTerminar(); }
 }
 
 /* ====================== INTRO (estrella + audio) ====================== */
