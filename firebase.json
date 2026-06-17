@@ -1,9 +1,10 @@
 {
   "hosting": {
+    "site": "quiromacia-ia",
     "public": "public",
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
     "rewrites": [
-      { "source": "/api/**", "function": "api" }
+      { "source": "/api/**", "function": { "functionId": "quiromanciaApi", "region": "us-central1" } }
     ],
     "headers": [
       {
@@ -15,9 +16,5 @@
   "functions": {
     "source": "functions",
     "runtime": "nodejs20"
-  },
-  "firestore": {
-    "rules": "firestore.rules",
-    "indexes": "firestore.indexes.json"
   }
 }

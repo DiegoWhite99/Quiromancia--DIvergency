@@ -38,7 +38,9 @@ Reglas:
 - Si la imagen no muestra con claridad una palma humana, dilo con tu estilo y pide una nueva foto con buena luz.`;
 }
 
-const apiKey = () => process.env.OPENAI_API_KEY;
+// En la nube usa el secret dedicado QUIROMANCIA_OPENAI_API_KEY; en local cae a
+// OPENAI_API_KEY (.env) para no romper el dev-server.
+const apiKey = () => process.env.QUIROMANCIA_OPENAI_API_KEY || process.env.OPENAI_API_KEY;
 
 async function handleChat(body) {
   if (!apiKey()) return { status: 500, data: { error: 'Falta OPENAI_API_KEY en el servidor.' } };

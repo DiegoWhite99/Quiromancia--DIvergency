@@ -14,7 +14,7 @@ admin.initializeApp();
 const db = admin.firestore();
 
 // Secretos (se configuran con: firebase functions:secrets:set NOMBRE)
-const OPENAI_API_KEY = defineSecret('OPENAI_API_KEY');
+const QUIROMANCIA_OPENAI_API_KEY = defineSecret('QUIROMANCIA_OPENAI_API_KEY');
 const SMTP_USER = defineSecret('SMTP_USER'); // p.ej. tucorreo@gmail.com
 const SMTP_PASS = defineSecret('SMTP_PASS'); // contraseña de aplicación de Gmail
 
@@ -98,8 +98,8 @@ router.post('/enviar', async (req, res) => {
 app.use('/api', router);
 app.use('/', router);
 
-exports.api = onRequest(
+exports.quiromanciaApi = onRequest(
   { region: 'us-central1', cors: true, timeoutSeconds: 60, memory: '512MiB',
-    secrets: [OPENAI_API_KEY, SMTP_USER, SMTP_PASS] },
+    secrets: [QUIROMANCIA_OPENAI_API_KEY, SMTP_USER, SMTP_PASS] },
   app
 );
