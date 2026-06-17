@@ -762,7 +762,8 @@ $('#btn-aceptar').addEventListener('click', () => {
   fondoMusica(true);   // música suave de fondo durante la lectura
   if(!(estado.lectura && estado.lectura.error)){
     hablar(compilarPrediccion());
-    if(lecturasDe(estado.correo) >= 3){ setTimeout(abrirRecibir, 5000); }
+    // Al terminar la predicción, ofrece enviarla al correo (tras una breve pausa para verla).
+    setTimeout(() => { if(pantallas.resultado.classList.contains('activo')) abrirRecibir(); }, 4500);
   }
 });
 
@@ -823,25 +824,31 @@ function _trazarPx(ctx, pts, color, w, f, glow){
   ctx.stroke(); ctx.restore();
 }
 
-// Yemas de los dedos (espacio 100x133), solo destellos decorativos.
-const TIPS = [ [15,68],[36,26],[50,15],[63.5,21],[76,36] ];
-// Cajita de cada línea: posición (fracción del canvas) y punto ancla en la palma (espacio 100x133).
-// Orden del backend: 0 Vida, 1 Corazón, 2 Cabeza, 3 Destino.
+// Yemas (espacio 100x133): nodos brillantes con etiqueta tipo escaneo, como la referencia.
+const TIPS = [
+  { p:[15,68],   lbl:'',           col:'#5BE0FF' },
+  { p:[36,26],   lbl:'Analizando', col:'#5BE0FF' },
+  { p:[50,15],   lbl:'Confirmado', col:'#54E08A' },
+  { p:[63.5,21], lbl:'Listo',      col:'#54E08A' },
+  { p:[76,36],   lbl:'',           col:'#5BE0FF' }
+];
+const SILUETA = muestrear(CROQUIS_D, 120);   // polígono del contorno (relleno de la mano)
+// Cajita de cada línea: posición (fracción del canvas) y ancla en la palma (espacio 100x133).
 const CALLOUT = [
-  { box:[0.17,0.20], anchor:[37,90] },
-  { box:[0.83,0.18], anchor:[54,70] },
-  { box:[0.17,0.82], anchor:[50,86] },
-  { box:[0.83,0.82], anchor:[52,100] }
+  { box:[0.18,0.23], anchor:[37,90] },   // Vida
+  { box:[0.82,0.20], anchor:[55,69] },   // Corazón
+  { box:[0.18,0.80], anchor:[50,86] },   // Cabeza
+  { box:[0.82,0.80], anchor:[52,100] }   // Destino
 ];
 let _boxesHit = [];
 function _rrect(ctx,x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
 // Nube de puntos de la mano (contorno + interior dentro de la silueta), espacio 100x133.
 function _puntosMano(){
-  const poly = muestrear(CROQUIS_D, 140);
+  const poly = SILUETA;
   const dentro = (x,y)=>{ let c=false; for(let i=0,j=poly.length-1;i<poly.length;j=i++){ const xi=poly[i][0],yi=poly[i][1],xj=poly[j][0],yj=poly[j][1]; if(((yi>y)!==(yj>y)) && (x < (xj-xi)*(y-yi)/((yj-yi)||1e-6)+xi)) c=!c; } return c; };
   const pts=[];
   for(let i=0;i<poly.length;i+=2) pts.push(poly[i]);                 // contorno
-  for(let y=20;y<118;y+=8){ for(let x=12;x<82;x+=8){ const jx=x+(Math.random()*4-2), jy=y+(Math.random()*4-2); if(dentro(jx,jy)) pts.push([jx,jy]); } }
+  for(let y=20;y<118;y+=6){ for(let x=12;x<82;x+=6){ const jx=x+(Math.random()*3-1.5), jy=y+(Math.random()*3-1.5); if(dentro(jx,jy)) pts.push([jx,jy]); } }
   return pts;
 }
 function _aristas(pts, k){
@@ -854,7 +861,7 @@ function _aristas(pts, k){
   return edges;
 }
 
-// Diagrama de la mano: malla holográfica + líneas de color + cajitas conectadas por líneas guía.
+// Mano holográfica centrada + cajitas místicas animadas alrededor.
 function dibujarManoCanvas(dataUrl, lineas){
   const cvn = $('#res-canvas'); if(!cvn) return;
   const token = ++_animToken;
@@ -869,67 +876,75 @@ function dibujarManoCanvas(dataUrl, lineas){
   const cssW = cvn.clientWidth || 320, cssH = cvn.clientHeight || cssW;
   cvn.width = Math.round(cssW*dpr); cvn.height = Math.round(cssH*dpr);
   const ctx = cvn.getContext('2d'), W = cvn.width, H = cvn.height;
-  // Mapea un punto de diseño (100x133) a la mano centrada (más pequeña, para que quepan las cajitas).
-  function P(p){ const hh = 0.62*H, hw = hh*(66/107), ox = (W-hw)/2, oy = 0.14*H; return [ ox + ((p[0]-14)/66)*hw, oy + ((p[1]-15)/107)*hh ]; }
+  // Mano centrada de tamaño medio (deja sitio a las cajitas).
+  function P(p){ const hh = 0.60*H, hw = hh*(66/107), ox = (W-hw)/2, oy = 0.135*H; return [ ox + ((p[0]-14)/66)*hw, oy + ((p[1]-15)/107)*hh ]; }
+  const sil = SILUETA.map(P);
 
   const inicio = performance.now();
   function frame(now){
     if(token !== _animToken) return;
     const t = now - inicio, T = t/1000, apar = clamp01(t/1500);
 
-    // Fondo + foto tenue con filtro azul
+    // Fondo + foto muy tenue
     ctx.globalCompositeOperation = 'source-over';
     ctx.fillStyle = '#06102e'; ctx.fillRect(0,0,W,H);
-    if(imgOK){ const cov = _coverDims(img.width, img.height, W, H);
-      ctx.save(); ctx.globalAlpha = 0.26; ctx.drawImage(img, cov.dx, cov.dy, cov.dw, cov.dh); ctx.restore();
-      ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = 'rgba(20,75,150,0.5)'; ctx.fillRect(0,0,W,H);
-      ctx.globalCompositeOperation = 'source-over'; ctx.fillStyle = 'rgba(6,14,42,0.5)'; ctx.fillRect(0,0,W,H);
-    }
+    if(imgOK){ const cov = _coverDims(img.width, img.height, W, H); ctx.save(); ctx.globalAlpha = 0.14; ctx.drawImage(img, cov.dx, cov.dy, cov.dw, cov.dh); ctx.restore(); }
+
+    // Silueta de la mano (forma oscura con borde cian)
+    ctx.beginPath(); ctx.moveTo(sil[0][0], sil[0][1]); for(let i=1;i<sil.length;i++) ctx.lineTo(sil[i][0], sil[i][1]); ctx.closePath();
+    ctx.save(); ctx.fillStyle = 'rgba(4,10,28,0.6)'; ctx.fill();
+    ctx.strokeStyle = 'rgba(90,224,255,0.45)'; ctx.lineWidth = Math.max(1, W*0.003); ctx.shadowColor = '#5BE0FF'; ctx.shadowBlur = W*0.016; ctx.stroke(); ctx.restore();
 
     // Malla de puntos (brillo aditivo)
     ctx.globalCompositeOperation = 'lighter';
-    ctx.strokeStyle = 'rgba(70,200,255,0.18)'; ctx.lineWidth = Math.max(0.5, W*0.0016);
+    ctx.strokeStyle = 'rgba(70,200,255,0.20)'; ctx.lineWidth = Math.max(0.5, W*0.0014);
     const ne = Math.floor(edges.length*apar);
     for(let i=0;i<ne;i++){ const a=P(pts[edges[i][0]]), b=P(pts[edges[i][1]]); ctx.beginPath(); ctx.moveTo(a[0],a[1]); ctx.lineTo(b[0],b[1]); ctx.stroke(); }
     const nn = Math.floor(pts.length*apar);
     for(let i=0;i<nn;i++){ const p=P(pts[i]); const tw=0.55+0.45*Math.sin(T*2+fases[i]);
-      ctx.fillStyle = 'rgba(150,235,255,'+(0.35+0.4*tw)+')'; ctx.shadowColor = '#5BE0FF'; ctx.shadowBlur = W*0.007*tw;
-      ctx.beginPath(); ctx.arc(p[0], p[1], Math.max(0.7, W*0.003), 0, 7); ctx.fill(); }
+      ctx.fillStyle = 'rgba(150,235,255,'+(0.35+0.4*tw)+')'; ctx.shadowColor = '#5BE0FF'; ctx.shadowBlur = W*0.005*tw;
+      ctx.beginPath(); ctx.arc(p[0], p[1], Math.max(0.5, W*0.0024), 0, 7); ctx.fill(); }
     ctx.shadowBlur = 0;
     // Destellos en las yemas
-    TIPS.forEach((tp,i)=>{ const f=clamp01((t-400 - i*110)/380); if(f<=0) return; const c=P(tp); const pr=0.7+0.3*Math.sin(T*2.5+i);
-      ctx.fillStyle='rgba(150,235,255,'+(f*0.85)+')'; ctx.shadowColor='#5BE0FF'; ctx.shadowBlur=W*0.012*pr; ctx.beginPath(); ctx.arc(c[0],c[1],W*0.0055,0,7); ctx.fill(); });
+    TIPS.forEach((tp,i)=>{ const f=clamp01((t-400 - i*110)/380); if(f<=0) return; const c=P(tp.p); const pr=0.7+0.3*Math.sin(T*2.5+i);
+      ctx.fillStyle='rgba(160,238,255,'+(f*0.9)+')'; ctx.shadowColor='#5BE0FF'; ctx.shadowBlur=W*0.012*pr; ctx.beginPath(); ctx.arc(c[0],c[1],W*0.005,0,7); ctx.fill(); });
     ctx.shadowBlur = 0;
 
     // Líneas de la palma en su color
-    palmas.forEach((pl,i)=>{ const f=clamp01((t-1300 - i*200)/520); _trazarPx(ctx, pl.map(P), colores[i]||'#EBC878', Math.max(2.2, W*0.011), f, true); });
+    palmas.forEach((pl,i)=>{ const f=clamp01((t-1100 - i*160)/480); _trazarPx(ctx, pl.map(P), colores[i]||'#EBC878', Math.max(2.4, W*0.012), f, true); });
 
-    // Líneas guía + cajitas con el nombre
+    // Cajitas místicas + líneas guía animadas
     ctx.globalCompositeOperation = 'source-over';
     const boxes = [];
     L.forEach((l,i)=>{ const cfg = CALLOUT[i]; if(!cfg) return;
-      const f = clamp01((t-1700 - i*200)/520); if(f<=0) return;
+      const f = clamp01((t-1500 - i*220)/560); if(f<=0) return;
       const col = colores[i] || '#EBC878';
-      const bw = W*0.30, bh = W*0.12, bcx = cfg.box[0]*W, bcy = cfg.box[1]*H, bx = bcx-bw/2, by = bcy-bh/2;
+      const pulse = 0.55 + 0.45*Math.sin(T*2.2 + i*1.4);
+      const bw = W*0.31, bh = W*0.128, bcx = cfg.box[0]*W, bcy = cfg.box[1]*H, bx = bcx-bw/2, by = bcy-bh/2;
       const izq = cfg.box[0] < 0.5;
       const anc = P(cfg.anchor);
-      const start = [ izq ? bx+bw : bx, bcy ];
+      const sxp = izq ? bx+bw : bx;
       ctx.save(); ctx.globalAlpha = f;
-      // línea guía
-      ctx.strokeStyle = col; ctx.lineWidth = Math.max(1.5, W*0.0045); ctx.shadowColor = col; ctx.shadowBlur = W*0.012;
-      ctx.beginPath(); ctx.moveTo(start[0], start[1]); ctx.lineTo(anc[0], anc[1]); ctx.stroke();
-      ctx.beginPath(); ctx.arc(anc[0], anc[1], W*0.009, 0, 7); ctx.fillStyle = col; ctx.fill();
-      ctx.shadowBlur = 0;
-      // cajita
-      _rrect(ctx, bx, by, bw, bh, W*0.022); ctx.fillStyle = 'rgba(8,18,48,0.85)'; ctx.fill();
-      ctx.lineWidth = Math.max(1.5, W*0.005); ctx.strokeStyle = col; ctx.stroke();
-      ctx.fillStyle = '#fff'; ctx.font = '700 ' + Math.max(11, W*0.036) + 'px Inter, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText((l.nombre||'').replace(/^L[ií]nea (de la |del |de )/i,''), bcx, bcy);
+      // línea guía con resplandor + nodo en la palma
+      ctx.strokeStyle = col; ctx.lineWidth = Math.max(1.4, W*0.004); ctx.shadowColor = col; ctx.shadowBlur = W*0.01*(0.6+pulse);
+      ctx.beginPath(); ctx.moveTo(sxp, bcy); ctx.lineTo(anc[0], anc[1]); ctx.stroke();
+      ctx.beginPath(); ctx.arc(anc[0], anc[1], W*0.008*(0.8+0.4*Math.sin(T*3+i)), 0, 7); ctx.fillStyle = col; ctx.shadowBlur = W*0.02; ctx.fill();
+      // pulso viajando por la línea guía
+      const tt = (T*0.45 + i*0.27) % 1, px = sxp+(anc[0]-sxp)*tt, py = bcy+(anc[1]-bcy)*tt;
+      ctx.beginPath(); ctx.arc(px, py, W*0.0035, 0, 7); ctx.fillStyle = '#fff'; ctx.fill(); ctx.shadowBlur = 0;
+      // cajita: relleno degradado + borde brillante pulsante
+      const g = ctx.createLinearGradient(bx, by, bx, by+bh); g.addColorStop(0,'rgba(18,28,66,0.92)'); g.addColorStop(1,'rgba(8,14,38,0.92)');
+      _rrect(ctx, bx, by, bw, bh, W*0.026); ctx.fillStyle = g; ctx.fill();
+      ctx.lineWidth = Math.max(1.5, W*0.0045); ctx.strokeStyle = col; ctx.shadowColor = col; ctx.shadowBlur = W*0.022*pulse; ctx.stroke(); ctx.shadowBlur = 0;
+      // nombre en tipografía display
+      const nm = (l.nombre||'').replace(/^L[ií]nea (de la |del |de )/i,'');
+      ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.font = '700 ' + Math.max(13, W*0.040) + 'px "Playfair Display", serif';
+      ctx.fillText((l.simbolo ? l.simbolo+' ' : '') + nm, bcx, bcy);
       ctx.restore();
       boxes.push({ x:bx, y:by, w:bw, h:bh, idx:i });
     });
     _boxesHit = boxes;
-
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
