@@ -760,12 +760,22 @@ $('#btn-aceptar').addEventListener('click', () => {
   renderResultado();
   mostrar('resultado');
   fondoMusica(true);   // música suave de fondo durante la lectura
+  estado.recibirOfrecido = false;
   if(!(estado.lectura && estado.lectura.error)){
-    hablar(compilarPrediccion());
-    // Al terminar la predicción, ofrece enviarla al correo (tras una breve pausa para verla).
-    setTimeout(() => { if(pantallas.resultado.classList.contains('activo')) abrirRecibir(); }, 4500);
+    const txt = compilarPrediccion();
+    hablar(txt, ofrecerRecibir);   // si la voz está activa, ofrece el correo al TERMINAR de leerla
+    // Respaldo: si no hay voz (o no dispara), ofrece tras un tiempo prudente.
+    setTimeout(ofrecerRecibir, estado.tts ? 75000 : 16000);
   }
 });
+
+// Ofrece enviar la predicción por correo (una sola vez, cuando la lectura ya terminó).
+function ofrecerRecibir(){
+  if(estado.recibirOfrecido) return;
+  if(!pantallas.resultado.classList.contains('activo')) return;
+  estado.recibirOfrecido = true;
+  abrirRecibir();
+}
 
 // Música de fondo suave (no compite con la voz del oráculo).
 function fondoMusica(activar){
@@ -801,6 +811,21 @@ const SVGNS = 'http://www.w3.org/2000/svg';
 // Croquis y líneas de RESPALDO (si OpenCV no está listo o no detecta mano), en espacio 100x133.
 const CROQUIS_D = "M33 120 L30 96 C28 86 18 80 14 73 C10 68 13 63 19 63 C25 63 31 66 31 60 L31 31 Q31 26 36 26 Q41 26 41 31 L41 57 Q43 60 45 57 L45 21 Q45 16 50 16 Q55 16 55 21 L55 56 Q57 59 59 56 L59 25 Q59 20 64 20 Q68 20 68 25 L68 58 Q70 61 71 58 L71 40 Q71 35 76 35 Q80 35 80 41 L78 96 L74 120 Z";
 const LINEAS_D = ["M41 60 Q30 86 43 113","M34 73 Q52 66 70 71","M33 83 Q52 81 67 89","M54 116 Q52 88 50 64"];
+// Curvas base de las líneas (p0, control, p2) en espacio 100x133. Se varían en cada lectura.
+const BASE_LINEAS = [
+  { p0:[41,60],  c:[30,86], p2:[43,113] },  // vida
+  { p0:[34,73],  c:[52,66], p2:[70,71]  },  // corazón
+  { p0:[33,83],  c:[52,81], p2:[67,89]  },  // cabeza
+  { p0:[54,116], c:[52,88], p2:[50,64]  }   // destino
+];
+// Genera las 4 líneas con variación aleatoria (para que no se vean siempre iguales).
+function lineasVariadas(){
+  const j = (v,a)=> v + (Math.random()*2-1)*a;
+  return BASE_LINEAS.map(b => {
+    const p0=[j(b.p0[0],3), j(b.p0[1],3.5)], p2=[j(b.p2[0],4), j(b.p2[1],5)], c=[j(b.c[0],7), j(b.c[1],7)];
+    return _quad(p0, c, p2, 46);
+  });
+}
 let _tempSvg = null, _animToken = 0;
 function _svg(){ if(!_tempSvg){ _tempSvg = document.createElementNS(SVGNS,'svg'); _tempSvg.setAttribute('viewBox','0 0 100 133'); _tempSvg.style.cssText='position:absolute;left:-9999px;width:10px;height:10px;overflow:hidden'; document.body.appendChild(_tempSvg); } return _tempSvg; }
 function muestrear(d, n){
@@ -835,10 +860,10 @@ const TIPS = [
 const SILUETA = muestrear(CROQUIS_D, 120);   // polígono del contorno (relleno de la mano)
 // Cajita de cada línea: posición (fracción del canvas) y ancla en la palma (espacio 100x133).
 const CALLOUT = [
-  { box:[0.18,0.23], anchor:[37,90] },   // Vida
-  { box:[0.82,0.20], anchor:[55,69] },   // Corazón
-  { box:[0.18,0.80], anchor:[50,86] },   // Cabeza
-  { box:[0.82,0.80], anchor:[52,100] }   // Destino
+  { box:[0.20,0.22], anchor:[37,90] },   // Vida
+  { box:[0.80,0.20], anchor:[55,69] },   // Corazón
+  { box:[0.20,0.80], anchor:[50,86] },   // Cabeza
+  { box:[0.80,0.80], anchor:[52,100] }   // Destino
 ];
 let _boxesHit = [];
 function _rrect(ctx,x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
@@ -869,7 +894,7 @@ function dibujarManoCanvas(dataUrl, lineas){
   const colores = L.map(l => PALETA[(l.color||'').toLowerCase()] || PALETA.dorado);
   const pts = _puntosMano(), edges = _aristas(pts, 3);
   const fases = pts.map((_,i) => (i*1.7) % 6.283);
-  const palmas = LINEAS_D.map(d => muestrear(d, 46));
+  const palmas = lineasVariadas();   // trazos con variación (no siempre iguales)
   const img = new Image(); let imgOK=false; img.onload = () => { imgOK = true; }; if(dataUrl) img.src = dataUrl;
 
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -877,7 +902,7 @@ function dibujarManoCanvas(dataUrl, lineas){
   cvn.width = Math.round(cssW*dpr); cvn.height = Math.round(cssH*dpr);
   const ctx = cvn.getContext('2d'), W = cvn.width, H = cvn.height;
   // Mano centrada de tamaño medio (deja sitio a las cajitas).
-  function P(p){ const hh = 0.60*H, hw = hh*(66/107), ox = (W-hw)/2, oy = 0.135*H; return [ ox + ((p[0]-14)/66)*hw, oy + ((p[1]-15)/107)*hh ]; }
+  function P(p){ const hh = 0.57*H, hw = hh*(66/107), ox = (W-hw)/2, oy = 0.15*H; return [ ox + ((p[0]-14)/66)*hw, oy + ((p[1]-15)/107)*hh ]; }
   const sil = SILUETA.map(P);
 
   const inicio = performance.now();
@@ -920,9 +945,10 @@ function dibujarManoCanvas(dataUrl, lineas){
       const f = clamp01((t-1500 - i*220)/560); if(f<=0) return;
       const col = colores[i] || '#EBC878';
       const pulse = 0.55 + 0.45*Math.sin(T*2.2 + i*1.4);
-      const bw = W*0.31, bh = W*0.128, bcx = cfg.box[0]*W, bcy = cfg.box[1]*H, bx = bcx-bw/2, by = bcy-bh/2;
+      const bw = W*0.29, bh = W*0.12, bcx = cfg.box[0]*W, bcy = cfg.box[1]*H, bx = bcx-bw/2, by = bcy-bh/2;
       const izq = cfg.box[0] < 0.5;
-      const anc = P(cfg.anchor);
+      const ap = palmas[i] ? palmas[i][Math.floor(palmas[i].length*0.5)] : cfg.anchor;   // punto real del trazo
+      const anc = P(ap);
       const sxp = izq ? bx+bw : bx;
       ctx.save(); ctx.globalAlpha = f;
       // línea guía con resplandor + nodo en la palma
@@ -939,7 +965,7 @@ function dibujarManoCanvas(dataUrl, lineas){
       // nombre en tipografía display
       const nm = (l.nombre||'').replace(/^L[ií]nea (de la |del |de )/i,'');
       ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.font = '700 ' + Math.max(13, W*0.040) + 'px "Playfair Display", serif';
+      ctx.font = '700 ' + Math.max(12, W*0.036) + 'px "Playfair Display", serif';
       ctx.fillText((l.simbolo ? l.simbolo+' ' : '') + nm, bcx, bcy);
       ctx.restore();
       boxes.push({ x:bx, y:by, w:bw, h:bh, idx:i });
@@ -1025,15 +1051,16 @@ $('#btn-tts').addEventListener('click', () => {
   if(estado.tts){ hablar(compilarPrediccion()); }
   else { try{ speechSynthesis.cancel(); }catch(e){} }
 });
-function hablar(texto){
+function hablar(texto, alTerminar){
   if(!estado.tts || !texto || !('speechSynthesis' in window)) return;
   try{
     speechSynthesis.cancel();
     const u=new SpeechSynthesisUtterance(texto);
     u.lang='es-ES'; u.rate=0.98;
     u.pitch = estado.modo==='mistico'?0.9 : estado.modo==='burlon'?1.1 : 1.0;
+    if(typeof alTerminar === 'function') u.onend = alTerminar;
     speechSynthesis.speak(u);
-  }catch(e){}
+  }catch(e){ if(typeof alTerminar === 'function') alTerminar(); }
 }
 
 /* ====================== INTRO (estrella + audio) ====================== */
