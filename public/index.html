@@ -224,6 +224,15 @@
   .segment button.sel{ color:#fff; border-color:transparent;
     background:linear-gradient(135deg,var(--azul),var(--azul-claro)); box-shadow:0 8px 22px -10px rgba(33,33,222,.9); }
 
+  /* Botonera de enfoque (qué quiere saber el usuario: amor, dinero, trabajo...) */
+  .temas{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+  .temas button{ display:flex; flex-direction:column; align-items:center; gap:5px; font-family:var(--cuerpo);
+    font-size:13px; font-weight:600; color:var(--texto-mute); background:rgba(255,255,255,.05);
+    border:1.5px solid var(--card-borde); border-radius:14px; padding:12px 6px; cursor:pointer; transition:all .18s; }
+  .temas button .ti{ font-size:22px; line-height:1; }
+  .temas button.sel{ color:#fff; border-color:transparent;
+    background:linear-gradient(135deg,var(--azul),var(--azul-claro)); box-shadow:0 8px 22px -10px rgba(33,33,222,.9); transform:translateY(-1px); }
+
   /* ---------- Cámara ---------- */
   #pantalla-camara{ gap:16px; align-items:center; }
   .visor{ position:relative; height:62dvh; aspect-ratio:3/4; max-width:100%; margin:0 auto; border-radius:26px; overflow:hidden;
@@ -384,6 +393,10 @@
   .res-extra{ padding:14px 16px; }
   .res-extra .lc-tit{ font-family:var(--display); font-weight:700; font-size:16px; margin-bottom:5px; }
   .res-extra .lc-txt{ font-size:15px; line-height:1.6; color:#ddddf5; }
+  .res-consejos{ margin:6px 0 2px; padding-left:0; list-style:none; display:flex; flex-direction:column; gap:8px; }
+  .res-consejos li{ position:relative; padding:10px 14px 10px 34px; font-size:14.5px; line-height:1.55; color:#eee9ff;
+    background:rgba(235,200,120,.07); border:1px solid rgba(235,200,120,.28); border-radius:12px; }
+  .res-consejos li::before{ content:"✦"; position:absolute; left:13px; top:10px; color:var(--oro); font-size:13px; }
 
   /* Botón de WhatsApp */
   .btn-wa{ display:flex; align-items:center; justify-content:center; gap:11px; width:100%;
@@ -586,8 +599,15 @@
         <div id="signo-auto" class="signo-auto" hidden></div>
       </div>
       <div class="campo">
-        <label>¿Algo que te gustaría saber? <span style="text-transform:none; font-weight:400">(opcional)</span></label>
-        <input id="in-tema" type="text" placeholder="Amor, trabajo, mi camino..." autocomplete="off" />
+        <label>¿Qué quieres saber? <span style="text-transform:none; font-weight:400">Elige tu enfoque</span></label>
+        <div class="temas" id="seg-tema">
+          <button type="button" data-val="" class="sel"><span class="ti">🔮</span>Todo</button>
+          <button type="button" data-val="amor"><span class="ti">💖</span>Amor</button>
+          <button type="button" data-val="dinero"><span class="ti">💰</span>Dinero</button>
+          <button type="button" data-val="trabajo"><span class="ti">💼</span>Trabajo</button>
+          <button type="button" data-val="familia"><span class="ti">👨‍👩‍👧</span>Familia</button>
+          <button type="button" data-val="salud"><span class="ti">🌿</span>Salud</button>
+        </div>
       </div>
       <p class="nota" id="nota-lecturas" style="text-align:left; margin:0"></p>
       <div class="err" id="err-form"></div>
@@ -859,6 +879,12 @@ $('#seg-mano').addEventListener('click', (e) => {
   [...$('#seg-mano').children].forEach(x => x.classList.remove('sel'));
   b.classList.add('sel'); estado.mano = b.dataset.val;
 });
+// Botonera de enfoque: el usuario elige sobre qué quiere saber (amor, dinero, ...).
+$('#seg-tema').addEventListener('click', (e) => {
+  const b = e.target.closest('button'); if(!b) return;
+  [...$('#seg-tema').children].forEach(x => x.classList.remove('sel'));
+  b.classList.add('sel'); estado.tema = b.dataset.val;
+});
 $('#btn-form-volver').addEventListener('click', () => mostrar('home'));
 
 /* ---------- Signo zodiacal automático desde la fecha ---------- */
@@ -916,7 +942,9 @@ $('#btn-a-camara').addEventListener('click', () => {
   estado.fecha  = $('#in-fecha').value;
   estado.anio   = estado.fecha ? estado.fecha.split('-')[0] : '';
   estado.signo  = calcularSigno(estado.fecha);
-  estado.tema   = $('#in-tema').value.trim();
+  // estado.tema ya se fija al tocar la botonera de enfoque (vacío = lectura general).
+  const temaSel = $('#seg-tema .sel');
+  estado.tema = temaSel ? (temaSel.dataset.val || '') : '';
   estado.flipManual = false;
 
   // Guarda los datos del formulario (lead) en la base de datos.
@@ -1071,9 +1099,9 @@ $('#btn-aceptar').addEventListener('click', () => {
   estado.recibirOfrecido = false;
   if(!(estado.lectura && estado.lectura.error)){
     const txt = compilarPrediccion();
-    hablar(txt, ofrecerRecibir);   // si la voz está activa, ofrece WhatsApp al TERMINAR de leerla (~1 min)
-    // Respaldo: si no hay voz (o no dispara onended), ofrece WhatsApp tras ~1 minuto.
-    setTimeout(ofrecerRecibir, estado.tts ? 75000 : 60000);
+    hablar(txt, ofrecerRecibir);   // si la voz está activa, ofrece WhatsApp al TERMINAR de leerla (~1.5 min)
+    // Respaldo: si no hay voz (o no dispara onended), ofrece WhatsApp tras la lectura.
+    setTimeout(ofrecerRecibir, estado.tts ? 110000 : 90000);
   }
 });
 
@@ -1132,6 +1160,13 @@ function lineasDeLectura(a){
     lectura: tx(l.lectura) || b.lectura
   }; });
 }
+// Consejos finales del oráculo (acepta arreglo o un solo texto).
+function consejosDe(a){
+  const c = a && a.consejos;
+  if(Array.isArray(c)) return c.map(x => String(x||'').trim()).filter(Boolean);
+  if(typeof c === 'string' && c.trim()) return [c.trim()];
+  return [];
+}
 
 function renderResultado(){
   const a = estado.lectura || {};
@@ -1165,6 +1200,11 @@ function renderResultado(){
     }).join('');
     let extra = '';
     if(a.montes) extra += '<div class="lc-tit" style="color:var(--oro-suave)">✋ Montes y forma de la mano</div><div class="lc-txt">'+esc(a.montes)+'</div>';
+    const consejos = consejosDe(a);
+    if(consejos.length){
+      extra += '<div class="lc-tit" style="color:var(--oro-suave); margin-top:14px">✨ Consejos del oráculo</div>'
+        + '<ul class="res-consejos">' + consejos.map(c => '<li>'+esc(c)+'</li>').join('') + '</ul>';
+    }
     if(a.cierre) extra += '<p class="res-cierre" style="margin-top:10px">'+esc(a.cierre)+'</p>';
     extraEl.innerHTML = extra; extraEl.hidden = !extra;
   }
@@ -1450,6 +1490,8 @@ function compilarPrediccion(){
     partes.push(t);
   });
   if(a.montes) partes.push('Montes y forma de la mano. ' + a.montes);
+  const consejos = consejosDe(a);
+  if(consejos.length) partes.push('Consejos del oráculo. ' + consejos.join(' '));
   if(a.cierre) partes.push(a.cierre);
   return partes.join('\n\n');
 }

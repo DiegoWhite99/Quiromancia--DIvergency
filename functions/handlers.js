@@ -75,20 +75,23 @@ Reglas:
 - Para CADA línea, el campo "observacion" DEBE citar al menos DOS rasgos concretos y visibles de ESA línea en ESTA palma (su recorrido, largo, profundidad, curva, cadenas, islas, ramas, cortes...). LUEGO, en "lectura", interpreta exactamente eso que observaste: la lectura tiene que derivarse de la observación, no al revés.
 - PROHIBIDO LO GENÉRICO: si una frase podría aplicarse a CUALQUIER mano, está MAL escrita; reescríbela citando un detalle concreto que VES en la foto. Dos personas distintas DEBEN recibir lecturas claramente diferentes entre sí. Nunca uses una plantilla fija ni repitas las mismas frases hechas; varía el vocabulario y los matices según lo que muestre cada palma.
 - PERSONALIZA con los datos de la persona: dirígete a ella por su NOMBRE con naturalidad y AJUSTA el énfasis a su ETAPA DE VIDA (si es joven, proyecta hacia el futuro que se abre ante ella; si tiene más años, reconoce su trayectoria y confirma su camino). La mano IZQUIERDA habla de lo heredado, el pasado y el mundo interior; la DERECHA, de lo que se está forjando hacia el futuro y el mundo exterior: matiza la lectura según cuál sea. NO uses el zodíaco ni inventes datos que no observes.
-- Las lecturas deben ser BREVES y potentes: 1 o 2 frases por línea (máximo ~25 palabras cada una), directas, afirmativas y en segunda persona. TODA la lectura debe poder leerse en voz alta en cerca de 1 minuto (en total, unas 150 palabras). Ejemplo del tono (NO lo copies literal): "Tu línea de la vida nace pegada a la de la cabeza y se ensancha cerca de la muñeca: revela cautela al empezar y una vitalidad que florece con los años." Evita frases vagas, pero NO te extiendas ni hagas párrafos largos.
+- Las lecturas deben ser potentes y con sustancia: 2 o 3 frases por línea (máximo ~40 palabras cada una), directas, afirmativas y en segunda persona. TODA la lectura debe poder leerse en voz alta en cerca de minuto y medio (en total, unas 210 palabras). Ejemplo del tono (NO lo copies literal): "Tu línea de la vida nace pegada a la de la cabeza y se ensancha cerca de la muñeca: revela cautela al empezar y una vitalidad que florece con los años." Evita frases vagas y relleno, pero da una lectura rica y desarrollada.
+- ENFOQUE POR TEMA: si la persona eligió un tema de interés (amor, dinero, trabajo, familia o salud), ENFOCA cerca del 80% de la lectura en ese tema: interpreta CADA línea desde esa óptica (qué dice tu mano sobre ESE tema) y resalta lo que más le importa; el 20% restante, una visión general. Si el tema es "general", reparte el enfoque de forma equilibrada.
+- CONSEJOS: termina SIEMPRE con "consejos": 2 o 3 recomendaciones breves, prácticas y en tu estilo, relacionadas con el tema elegido (p. ej. dinero: "Cuida lo que gastas y aparta un ahorro cada mes"; amor: "Escucha de verdad y di lo que sientes"; trabajo: "Apuesta por lo que se te da bien"). Son guiños de oráculo para reflexionar, NO órdenes.
 - OBLIGATORIO: NUNCA dejes el arreglo "lineas" vacío ni dejes "observacion"/"lectura" en blanco. SIEMPRE devuelve las CUATRO líneas mayores (vida, corazón, cabeza, destino), cada una con su lectura propia y DISTINTA de las demás. Aunque la mano se vea pequeña, lejana, mal iluminada o la foto no sea perfecta, haz tu MEJOR interpretación con lo que SÍ alcances a ver; jamás devuelvas campos vacíos ni te niegues. En "montes" describe la forma real de la mano y los dedos que observaste (cuadrada/alargada, dedos largos/cortos, pulgar) y relaciónalo con los montes.
 - A cada línea asígnale un "color" según el significado DOMINANTE de lo que revela, eligiendo SOLO uno de estos: "verde" (vida, vitalidad, salud), "azul" (riqueza, prosperidad, abundancia, mente), "rosa" (amor, afectos), "dorado" (destino, éxito, fortuna), "morado" (intuición, espiritualidad) o "rojo" (advertencias o aspectos difíciles). Normalmente: Vida→verde, Corazón→rosa, Cabeza→azul, Destino→dorado; usa "rojo" solo si esa línea muestra algo que conviene cuidar.
-- Tono positivo e inspirador (respetando tu personalidad). Es para entretenimiento y autorreflexión: sin consejos médicos, legales o financieros, ni fechas exactas.
+- Tono positivo e inspirador (respetando tu personalidad). Es para entretenimiento y autorreflexión: los "consejos" son sugerencias ligeras y positivas en clave de oráculo, NO asesoría médica, legal ni financiera profesional ni diagnósticos; no des fechas exactas.
 - Responde EXCLUSIVAMENTE con un objeto JSON válido (sin markdown ni texto extra), con EXACTAMENTE esta forma:
 {
   "saludo": "1 frase breve de bienvenida usando el nombre, en tu estilo",
   "lineas": [
-    {"nombre":"Línea de la Vida","simbolo":"🌿","color":"verde","puntos":[[x,y],[x,y],[x,y],[x,y],[x,y]],"observacion":"1 frase corta sobre cómo se ve esta línea en su palma","lectura":"1-2 frases de interpretación directa (máx ~25 palabras)"},
+    {"nombre":"Línea de la Vida","simbolo":"🌿","color":"verde","puntos":[[x,y],[x,y],[x,y],[x,y],[x,y]],"observacion":"1 frase corta sobre cómo se ve esta línea en su palma","lectura":"2-3 frases de interpretación directa (máx ~40 palabras), enfocadas en el tema elegido"},
     {"nombre":"Línea del Corazón","simbolo":"❤️","color":"rosa","puntos":[[x,y],...],"observacion":"...","lectura":"..."},
     {"nombre":"Línea de la Cabeza","simbolo":"🧠","color":"azul","puntos":[[x,y],...],"observacion":"...","lectura":"..."},
     {"nombre":"Línea del Destino","simbolo":"⭐","color":"dorado","puntos":[[x,y],...],"observacion":"...","lectura":"..."}
   ],
   "montes": "1-2 frases sobre los montes (Venus, Júpiter, Apolo) y la forma de la mano",
+  "consejos": ["consejo breve 1 sobre el tema elegido", "consejo breve 2", "consejo breve 3 (opcional)"],
   "cierre": "1 frase de cierre inspirador, en tu estilo"
 }`;
 }
@@ -129,10 +132,21 @@ async function handleLectura(body) {
   const manoTxt = ((body.mano || 'derecha') === 'izquierda')
     ? 'izquierda (lo heredado, el pasado y el mundo interior)'
     : 'derecha (lo que se forja hacia el futuro y el mundo exterior)';
+  // Tema de enfoque elegido en la botonera del formulario.
+  const TEMAS = {
+    amor: 'el AMOR y las relaciones', dinero: 'el DINERO y la prosperidad',
+    trabajo: 'el TRABAJO y la vocación', familia: 'la FAMILIA y los vínculos',
+    salud: 'la SALUD y la energía vital'
+  };
+  const temaKey = (body.tema || '').toLowerCase().trim();
+  const temaTxt = TEMAS[temaKey] || (body.tema ? body.tema : '');
+  const enfoque = temaTxt
+    ? ` ENFÓCATE sobre todo en ${temaTxt}: dedica cerca del 80% de la lectura a ese tema (interpreta cada línea desde esa óptica) y CIERRA con consejos prácticos sobre ${temaTxt}.`
+    : ` La persona quiere una visión general: reparte el enfoque y da consejos generales para la vida.`;
   const intro = `Persona: ${body.nombre || 'anónima'}.`
     + ` Mano fotografiada: ${manoTxt}.`
     + (edad != null ? ` Edad aproximada: ${edad} años — ${etapaVida(edad)}.` : '')
-    + (body.tema ? ` Le interesa especialmente: ${body.tema}.` : '')
+    + enfoque
     + ` Analiza con detalle ESTA fotografía de la palma siguiendo el protocolo de observación: mide la forma de la mano y los dedos, sigue el recorrido REAL de cada línea y devuelve sus "puntos" sobre la foto. Haz una lectura ÚNICA y PERSONAL —usa su nombre y su etapa de vida— basada en lo que de verdad ves aquí (otra persona debe recibir una lectura distinta). Responde en formato JSON.`;
 
   const r = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -140,7 +154,7 @@ async function handleLectura(body) {
     headers: { 'content-type': 'application/json', authorization: `Bearer ${apiKey()}` },
     body: JSON.stringify({
       model: MODELO,
-      max_tokens: 2200,
+      max_tokens: 2600,
       temperature: cfg.temperatura,
       // Penaliza repetir las mismas palabras → menos frases hechas y más variedad real.
       frequency_penalty: 0.4,
