@@ -42,9 +42,12 @@
   .twinkle{ animation:tw 4s ease-in-out infinite; }
 
   #app{ position:relative; z-index:2; height:100dvh; width:100vw;
-    display:flex; align-items:center; justify-content:center;
-    padding:max(env(safe-area-inset-top),18px) max(env(safe-area-inset-right),20px) max(env(safe-area-inset-bottom),18px) max(env(safe-area-inset-left),20px); }
-  .screen{ display:none; width:100%; max-width:760px; max-height:100%; flex-direction:column; animation:fade .6s ease both; }
+    display:flex; flex-direction:column; align-items:center; justify-content:flex-start;
+    overflow-y:auto; overflow-x:hidden; -webkit-overflow-scrolling:touch;
+    padding:max(env(safe-area-inset-top),16px) max(env(safe-area-inset-right),18px) max(env(safe-area-inset-bottom),16px) max(env(safe-area-inset-left),18px); }
+  /* margin:auto centra la pantalla cuando cabe; cuando es más alta que el celular,
+     se alinea arriba y #app hace scroll (NUNCA se corta el contenido). */
+  .screen{ display:none; width:100%; max-width:760px; margin:auto 0; flex-direction:column; animation:fade .6s ease both; }
   .screen.activo{ display:flex; }
   @keyframes fade{ from{opacity:0; transform:translateY(14px)} to{opacity:1; transform:none} }
   .scroll{ overflow-y:auto; -webkit-overflow-scrolling:touch; }
@@ -56,8 +59,8 @@
   .marca::before{ background:linear-gradient(90deg,var(--oro),transparent); }
   .mute{ color:var(--texto-mute); }
 
-  .btn{ appearance:none; border:none; cursor:pointer; font-family:var(--cuerpo); font-weight:600; font-size:17px;
-    color:#fff; border-radius:18px; padding:18px 26px; width:100%;
+  .btn{ appearance:none; border:none; cursor:pointer; font-family:var(--cuerpo); font-weight:600; font-size:16px;
+    color:#fff; border-radius:16px; padding:15px 24px; width:100%;
     background:linear-gradient(135deg, var(--azul) 0%, var(--azul-claro) 100%);
     box-shadow:0 12px 34px -10px rgba(33,33,222,.85), inset 0 1px 0 rgba(255,255,255,.25);
     transition:transform .15s ease, box-shadow .2s ease, opacity .2s; }
@@ -73,7 +76,7 @@
 
   /* ---------- INTRO (estrella + audio) ---------- */
   #pantalla-intro{ align-items:center; text-align:center; justify-content:center;
-    gap:clamp(13px,2.4vh,22px); cursor:pointer; overflow:hidden; }
+    gap:clamp(7px,1.5vh,15px); cursor:pointer; }
 
   /* Capa de fondo de la intro: nebulosa dorada + viñeta + íconos místicos flotantes */
   #intro-fx{ position:fixed; inset:0; z-index:1; pointer-events:none; overflow:hidden; transition:opacity 1s ease;
@@ -109,7 +112,7 @@
   }
 
   /* Estrella central: núcleo + cruz + halo + anillo + chispas */
-  .estrella-wrap{ position:relative; width:clamp(190px,54vw,270px); aspect-ratio:1; display:grid; place-items:center; }
+  .estrella-wrap{ position:relative; width:clamp(140px,40vw,210px); aspect-ratio:1; display:grid; place-items:center; }
   .estrella-wrap .halo{ position:absolute; inset:-48%; border-radius:50%; mix-blend-mode:screen;
     background:radial-gradient(circle, rgba(255,236,180,.40) 0%, rgba(235,200,120,.13) 20%, rgba(235,200,120,.04) 38%, transparent 60%);
     animation:haloLate 4s ease-in-out infinite; }
@@ -137,22 +140,22 @@
   @keyframes lateEstrella{ 0%,100%{ transform:scale(.95) } 50%{ transform:scale(1.05) } }
 
   /* Logo Divergency AI (pequeño, bajo la estrella) */
-  .intro-logo{ width:clamp(140px,38vw,182px); height:auto; display:block; margin:0 auto;
+  .intro-logo{ width:clamp(108px,28vw,148px); height:auto; display:block; margin:0 auto;
     filter:drop-shadow(0 0 10px rgba(235,200,120,.4)); }
 
   /* Título + tagline */
   #pantalla-intro h1{ font-family:var(--display); font-weight:700; font-variant-caps:small-caps;
-    font-size:clamp(38px,10.5vw,66px); letter-spacing:.03em; color:#F4EEDD; line-height:1; text-shadow:0 0 30px rgba(235,200,120,.18); }
+    font-size:clamp(32px,8.5vw,54px); letter-spacing:.03em; color:#F4EEDD; line-height:1; text-shadow:0 0 30px rgba(235,200,120,.18); }
   #pantalla-intro h1 .ai{ font-style:normal;
     background:linear-gradient(180deg,#FBE9B5 0%, #E7BE6B 45%, #C8902F 100%);
     -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; color:transparent; }
-  .intro-tagline{ margin:14px auto 0; font-size:13.5px; letter-spacing:.05em; color:var(--texto-mute);
-    max-width:380px; line-height:1.6; display:flex; align-items:center; gap:12px; justify-content:center; }
+  .intro-tagline{ margin:8px auto 0; font-size:13px; letter-spacing:.05em; color:var(--texto-mute);
+    max-width:360px; line-height:1.5; display:flex; align-items:center; gap:12px; justify-content:center; }
   .intro-tagline .sp{ color:var(--oro); font-size:11px; flex:none; animation:tw 2.4s ease-in-out infinite; }
 
   /* Botón "Tocar para iniciar" con borde dorado degradado */
-  .intro-btn{ display:inline-flex; align-items:center; gap:14px; margin-top:8px;
-    border:2px solid transparent; border-radius:999px; padding:17px 36px;
+  .intro-btn{ display:inline-flex; align-items:center; gap:14px; margin-top:6px;
+    border:2px solid transparent; border-radius:999px; padding:14px 30px;
     color:#F6EFD9; font-family:var(--cuerpo); font-weight:600; letter-spacing:.24em; text-transform:uppercase; font-size:13px;
     background:linear-gradient(rgba(10,8,26,.45),rgba(10,8,26,.45)) padding-box,
                linear-gradient(135deg, #FBE9B5, #C8902F 48%, #FBE9B5) border-box;
@@ -173,7 +176,7 @@
   @keyframes estallido{ to{ transform:scale(4.5); opacity:0; filter:drop-shadow(0 0 70px rgba(235,200,120,1)) } }
 
   /* ---------- HOME ---------- */
-  #pantalla-home{ text-align:center; align-items:center; gap:24px; }
+  #pantalla-home{ text-align:center; align-items:center; gap:16px; }
   .palma-hero{ width:104px; height:104px; filter:drop-shadow(0 0 26px rgba(91,91,255,.55)); }
   #pantalla-home h1{ font-size:clamp(34px,8vw,54px); }
   #pantalla-home h1 em{ font-style:italic; color:var(--oro); }
@@ -197,17 +200,17 @@
   .modos button.sel small{ color:rgba(255,255,255,.85); }
 
   /* ---------- Formulario ---------- */
-  .form-wrap{ padding:28px 24px 26px; gap:18px; display:flex; flex-direction:column; }
-  .campo{ display:flex; flex-direction:column; gap:9px; }
-  .campo label{ font-size:13px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--texto-mute); }
-  .campo input{ font-family:var(--cuerpo); font-size:17px; color:var(--texto);
-    background:rgba(255,255,255,.06); border:1.5px solid var(--card-borde); border-radius:15px;
-    padding:16px 17px; outline:none; transition:border-color .2s, background .2s; }
+  .form-wrap{ padding:18px 16px 18px; gap:11px; display:flex; flex-direction:column; }
+  .campo{ display:flex; flex-direction:column; gap:5px; }
+  .campo label{ font-size:12px; font-weight:600; letter-spacing:.07em; text-transform:uppercase; color:var(--texto-mute); }
+  .campo input{ font-family:var(--cuerpo); font-size:16px; color:var(--texto);
+    background:rgba(255,255,255,.06); border:1.5px solid var(--card-borde); border-radius:13px;
+    padding:12px 14px; outline:none; transition:border-color .2s, background .2s; }
   .campo input:focus{ border-color:var(--azul-claro); background:rgba(91,91,255,.1); }
   .campo input::placeholder{ color:#7a79b0; }
-  .campo select{ font-family:var(--cuerpo); font-size:17px; color:var(--texto); cursor:pointer;
-    background-color:rgba(255,255,255,.06); border:1.5px solid var(--card-borde); border-radius:15px;
-    padding:16px 17px; outline:none; transition:border-color .2s, background-color .2s;
+  .campo select{ font-family:var(--cuerpo); font-size:16px; color:var(--texto); cursor:pointer;
+    background-color:rgba(255,255,255,.06); border:1.5px solid var(--card-borde); border-radius:13px;
+    padding:12px 14px; outline:none; transition:border-color .2s, background-color .2s;
     appearance:none; -webkit-appearance:none;
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23A9A8D8' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
     background-repeat:no-repeat; background-position:right 16px center; }
@@ -216,8 +219,8 @@
   .campo input[type=date]{ color-scheme:dark; }
   .signo-auto{ font-size:14px; font-weight:600; color:var(--oro-suave); margin-top:2px; }
   .segment{ display:flex; gap:10px; }
-  .segment button{ flex:1; font-family:var(--cuerpo); font-size:16px; font-weight:600; color:var(--texto-mute);
-    background:rgba(255,255,255,.05); border:1.5px solid var(--card-borde); border-radius:15px; padding:15px; cursor:pointer; transition:all .18s; }
+  .segment button{ flex:1; font-family:var(--cuerpo); font-size:15px; font-weight:600; color:var(--texto-mute);
+    background:rgba(255,255,255,.05); border:1.5px solid var(--card-borde); border-radius:13px; padding:11px; cursor:pointer; transition:all .18s; }
   .segment button.sel{ color:#fff; border-color:transparent;
     background:linear-gradient(135deg,var(--azul),var(--azul-claro)); box-shadow:0 8px 22px -10px rgba(33,33,222,.9); }
 
@@ -292,14 +295,16 @@
   #estado-analisis{ font-size:16px; min-height:24px; color:var(--texto-mute); transition:opacity .3s; }
 
   /* ---------- Modales (disclaimer / recibir) ---------- */
-  #modal-disclaimer, #modal-recibir{ position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; padding:26px;
+  #modal-disclaimer, #modal-recibir, #modal-reintentar{ position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; padding:20px;
+    overflow-y:auto; -webkit-overflow-scrolling:touch;
     background:rgba(4,4,28,.72); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); }
-  #modal-disclaimer.activo, #modal-recibir.activo{ display:flex; animation:fade .35s ease; }
-  .modal-card{ max-width:480px; width:100%; padding:34px 30px; text-align:center; }
-  .sello{ width:74px; height:74px; margin:0 auto 18px; border-radius:50%; display:grid; place-items:center; font-size:34px;
+  #modal-disclaimer.activo, #modal-recibir.activo, #modal-reintentar.activo{ display:flex; animation:fade .35s ease; }
+  /* margin:auto centra la tarjeta; si es más alta que el celular, se alinea arriba y el modal hace scroll. */
+  .modal-card{ max-width:460px; width:100%; margin:auto; padding:26px 24px; text-align:center; }
+  .sello{ width:62px; height:62px; margin:0 auto 14px; border-radius:50%; display:grid; place-items:center; font-size:30px;
     background:radial-gradient(circle at 50% 30%, rgba(235,200,120,.35), rgba(235,200,120,.06)); border:1px solid rgba(235,200,120,.45); }
-  .modal-card h2{ font-size:27px; margin-bottom:14px; }
-  .modal-card p{ font-size:15.5px; line-height:1.65; color:var(--texto-mute); margin:0 0 12px; }
+  .modal-card h2{ font-size:23px; margin-bottom:11px; }
+  .modal-card p{ font-size:14.5px; line-height:1.6; color:var(--texto-mute); margin:0 0 10px; }
   .btn-google{ display:flex; align-items:center; justify-content:center; gap:11px; width:100%;
     background:#fff; color:#1f1f1f; border:none; border-radius:16px; padding:15px; font-family:var(--cuerpo);
     font-weight:600; font-size:16px; cursor:pointer; box-shadow:0 10px 26px -12px rgba(0,0,0,.6); transition:transform .15s; margin-top:6px; }
@@ -307,7 +312,8 @@
   .recibir-estado{ font-size:14px; color:var(--oro-suave); min-height:20px; margin:12px 0 4px; line-height:1.5; }
 
   /* ---------- Resultado (mano dibujada + líneas) ---------- */
-  #pantalla-resultado{ height:100%; gap:12px; }
+  /* La lectura puede ensancharse para repartir las tarjetas alrededor del diagrama. */
+  #pantalla-resultado{ height:100%; gap:12px; max-width:1080px; }
   .res-head{ display:flex; gap:12px; align-items:flex-start; }
   .res-head .info{ flex:1; min-width:0; }
   .chat-nombre{ font-family:var(--display); font-weight:700; font-size:20px; color:var(--texto); margin-top:4px; line-height:1.1;
@@ -321,9 +327,18 @@
   .icon-btn.on{ color:var(--oro); border-color:rgba(235,200,120,.5); }
 
   .res-scroll{ flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; display:flex; flex-direction:column; gap:14px; padding:2px 2px 4px; }
-  .res-mapa{ position:relative; width:100%; max-width:560px; aspect-ratio:1/1; margin:0 auto; flex-shrink:0; border-radius:20px; overflow:hidden;
+  .res-mapa{ position:relative; grid-area:mapa; width:100%; max-width:560px; aspect-ratio:1/1; margin:0 auto; align-self:center; flex-shrink:0; border-radius:20px; overflow:hidden;
     background:radial-gradient(circle at 50% 42%, #0c1b46, #06102e 70%); border:1px solid rgba(91,160,255,.25);
     box-shadow:0 22px 55px -32px #000, 0 0 34px -8px rgba(91,200,255,.35); }
+  /* Diagrama anotado: en móvil se apila; en pantalla ancha la mano queda al centro
+     y las tarjetas se reparten en sus esquinas (Vida/Cabeza a la izq., Corazón/Destino a la der.). */
+  .res-diagrama{ display:grid; gap:13px; align-items:start;
+    grid-template-columns:1fr; grid-template-areas:"mapa" "vida" "corazon" "cabeza" "destino"; }
+  @media (min-width:880px){
+    .res-diagrama{ align-items:stretch; gap:16px;
+      grid-template-columns:minmax(210px,1fr) minmax(320px,1.5fr) minmax(210px,1fr);
+      grid-template-areas:"vida mapa corazon" "cabeza mapa destino"; }
+  }
   #res-canvas{ display:block; width:100%; height:100%; cursor:pointer; }
   .res-desc{ padding:16px 18px; }
   .res-desc-tit{ font-family:var(--display); font-weight:700; font-size:18px; margin-bottom:6px; color:var(--oro-suave); }
@@ -352,9 +367,12 @@
 
   /* Pista + tarjetas de descripción por línea (bajo el croquis) */
   .res-pista{ text-align:center; font-size:12.5px; color:var(--texto-mute); margin:0; }
-  .res-cards{ display:flex; flex-direction:column; gap:12px; }
+  /* display:contents → las tarjetas se colocan directamente en la malla del diagrama. */
+  .res-cards{ display:contents; }
   .linea-card{ padding:14px 16px; border-left:3px solid var(--c,#EBC878); scroll-margin-top:14px;
+    align-self:start;
     transition:box-shadow .35s ease, transform .35s ease; }
+  .err-card{ grid-column:1 / -1; }
   .linea-card .lc-tit{ font-family:var(--display); font-weight:700; font-size:17px; margin-bottom:5px; display:flex; align-items:center; gap:7px; }
   .linea-card .lc-obs{ font-size:13px; font-style:italic; color:var(--texto-mute); line-height:1.5; margin-bottom:5px; }
   .linea-card .lc-txt{ font-size:15px; line-height:1.6; color:#ddddf5; }
@@ -535,10 +553,10 @@
 
   <!-- ============ FORMULARIO ============ -->
   <section class="screen scroll" id="pantalla-form">
-    <div style="text-align:center; margin-bottom:20px">
+    <div style="text-align:center; margin-bottom:12px">
       <div class="marca">Antes de empezar</div>
-      <h2 style="font-size:30px; margin-top:14px">Cuéntame de ti</h2>
-      <p class="mute" style="font-size:15px; margin-top:8px">Solo lo esencial para personalizar tu lectura.</p>
+      <h2 style="font-size:23px; margin-top:8px">Cuéntame de ti</h2>
+      <p class="mute" style="font-size:13.5px; margin-top:5px">Solo lo esencial para personalizar tu lectura.</p>
     </div>
     <div class="glass form-wrap">
       <div class="campo">
@@ -655,12 +673,15 @@
     </div>
 
     <div class="res-scroll">
-      <div class="res-mapa" id="res-foto-wrap">
-        <canvas id="res-canvas"></canvas>
-      </div>
       <p class="res-saludo" id="res-saludo"></p>
+      <!-- Diagrama anotado: la mano al centro y cada tarjeta junto a su caja. -->
+      <div class="res-diagrama" id="res-diagrama">
+        <div class="res-mapa" id="res-foto-wrap">
+          <canvas id="res-canvas"></canvas>
+        </div>
+        <div class="res-cards" id="res-cards"></div>
+      </div>
       <p class="res-pista" id="res-pista">✦ Toca una caja del croquis para resaltar su línea.</p>
-      <div class="res-cards" id="res-cards"></div>
       <div class="glass res-extra" id="res-extra" hidden></div>
     </div>
 
@@ -700,6 +721,20 @@
     </button>
     <div class="recibir-estado" id="recibir-estado"></div>
     <button class="btn fantasma" id="btn-recibir-cerrar">Ahora no</button>
+  </div>
+</div>
+
+<!-- ============ MODAL REINTENTAR (foto de la mano no legible) ============ -->
+<div id="modal-reintentar">
+  <div class="glass modal-card">
+    <div class="sello">📷</div>
+    <h2>Tu palma no se vio con claridad</h2>
+    <p id="reintentar-msg">No logramos distinguir las líneas de tu palma en esta foto.</p>
+    <p>Para una buena lectura: muestra la <b style="color:var(--oro-suave)">palma completa</b> de frente, con <b style="color:var(--oro-suave)">buena luz</b>, la mano <b style="color:var(--oro-suave)">cerca</b> de la cámara y los dedos algo separados.</p>
+    <div style="margin-top:20px; display:flex; flex-direction:column; gap:10px">
+      <button class="btn oro" id="btn-reintentar-foto">📷 Tomar otra foto</button>
+      <button class="btn fantasma" id="btn-reintentar-inicio">Volver al inicio</button>
+    </div>
   </div>
 </div>
 
@@ -949,13 +984,15 @@ $('#file-input').addEventListener('change', (e) => {
   img.src = URL.createObjectURL(f);
 });
 function guardarImagen(fuente, w, h, espejo){
-  const MAX=1280, esc=Math.min(1, MAX/Math.max(w,h));
+  // Más resolución y calidad = líneas finas más nítidas para que la IA lea de verdad
+  // la palma (sigue muy por debajo del límite de subida de 12 MB).
+  const MAX=1600, esc=Math.min(1, MAX/Math.max(w,h));
   const cw=Math.round(w*esc), ch=Math.round(h*esc);
   const cv=document.createElement('canvas'); cv.width=cw; cv.height=ch;
   const ctx=cv.getContext('2d');
   if(espejo){ ctx.translate(cw,0); ctx.scale(-1,1); }      // espeja para coincidir con el preview
   ctx.drawImage(fuente,0,0,cw,ch);
-  estado.dataUrl = cv.toDataURL('image/jpeg', 0.9);
+  estado.dataUrl = cv.toDataURL('image/jpeg', 0.92);
   // Escanea la mano (MediaPipe, en segundo plano): cuando termina, las líneas se
   // anclan a la mano real de la foto. El bucle del canvas lo recoge en vivo.
   estado.landmarks = null;
@@ -987,16 +1024,42 @@ async function iniciarLectura(){
   cicloEstados();
   try{
     const { lectura } = await postJSON('/api/lectura', {
-      modo:estado.modo, nombre:estado.nombre, mano:estado.mano, tema:estado.tema, dataUrl:estado.dataUrl
+      modo:estado.modo, nombre:estado.nombre, mano:estado.mano, tema:estado.tema,
+      fecha:estado.fecha, anio:estado.anio, signo:estado.signo, dataUrl:estado.dataUrl
     });
     estado.lectura = lectura || {};
-    registrarLectura(estado.correo);   // cuenta para el límite de 3 por usuario
   }catch(e){
     estado.lectura = { error: e.message };
   }
   detenerCiclo();
+  // Si la palma no se pudo leer (foto borrosa/lejana o error), pedimos repetir la
+  // foto en vez de mostrar una pantalla vacía. Solo contamos las lecturas que sí salieron.
+  if(!lecturaUsable(estado.lectura)){ mostrarReintento(mensajeReintento(estado.lectura)); return; }
+  registrarLectura(estado.correo);   // cuenta para el límite de 3 por usuario
   $('#modal-disclaimer').classList.add('activo');
 }
+
+// Una lectura es válida si trae al menos una línea (las cajas salen de aquí).
+function lecturaUsable(a){ return !!(a && !a.error && Array.isArray(a.lineas) && a.lineas.length >= 1); }
+function mensajeReintento(a){
+  const e = (a && a.error) ? String(a.error) : '';
+  // Solo mostramos mensajes amables (los del servidor); ocultamos errores técnicos.
+  if(/palma|foto|límite|correo/i.test(e)) return e;
+  return 'No logramos distinguir las líneas de tu palma en esta foto.';
+}
+function mostrarReintento(msg){
+  const t = $('#reintentar-msg'); if(t) t.textContent = msg || 'No logramos leer tu palma.';
+  $('#modal-reintentar').classList.add('activo');
+}
+$('#btn-reintentar-foto').addEventListener('click', () => {
+  $('#modal-reintentar').classList.remove('activo');
+  estado.lectura = null; estado.landmarks = null;
+  mostrar('camara'); iniciarCamara();
+});
+$('#btn-reintentar-inicio').addEventListener('click', () => {
+  $('#modal-reintentar').classList.remove('activo');
+  nuevaLectura();
+});
 
 /* ====================== DISCLAIMER → RESULTADO ====================== */
 $('#btn-aceptar').addEventListener('click', () => {
@@ -1032,6 +1095,43 @@ function fondoMusica(activar){
 
 /* ====================== RENDER DE LA LECTURA ====================== */
 function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// Respaldo: si el oráculo no devuelve líneas (foto difícil o respuesta vacía),
+// SIEMPRE mostramos las 4 cajas con una lectura general, nunca una pantalla en blanco.
+const LINEAS_BASE = [
+  { nombre:'Línea de la Vida',    simbolo:'🌿', color:'verde',  observacion:'Rodea la base del pulgar (monte de Venus).',
+    lectura:'Tu vitalidad es firme y constante: afrontas la vida con energía y arraigo.' },
+  { nombre:'Línea del Corazón',   simbolo:'❤️', color:'rosa',   observacion:'Recorre el arco alto, bajo los dedos.',
+    lectura:'Sientes con intensidad y entregas un afecto verdadero a quienes amas.' },
+  { nombre:'Línea de la Cabeza',  simbolo:'🧠', color:'azul',   observacion:'Cruza el centro de la palma.',
+    lectura:'Piensas con claridad y equilibras la razón con la intuición.' },
+  { nombre:'Línea del Destino',   simbolo:'⭐', color:'dorado', observacion:'Asciende hacia el dedo medio.',
+    lectura:'Forjas tu propio rumbo con determinación y propósito.' }
+];
+// Empareja una línea de la IA con su respaldo (por nombre) para rellenar huecos.
+function baseDeLinea(l, i){
+  const n = ((l && l.nombre) || '').toLowerCase();
+  if(/vida/.test(n))   return LINEAS_BASE[0];
+  if(/coraz/.test(n))  return LINEAS_BASE[1];
+  if(/cabeza/.test(n)) return LINEAS_BASE[2];
+  if(/destino|fortuna|saturno/.test(n)) return LINEAS_BASE[3];
+  return LINEAS_BASE[i] || LINEAS_BASE[0];
+}
+// Devuelve SIEMPRE 4 líneas con TODOS sus campos llenos (la del Destino suele venir
+// vacía porque "a veces está ausente"; aquí garantizamos su texto).
+function lineasDeLectura(a){
+  const arr = (a && Array.isArray(a.lineas) && a.lineas.length) ? a.lineas : LINEAS_BASE;
+  const tx = s => (typeof s === 'string' && s.trim()) ? s.trim() : '';
+  return arr.map((l,i) => { const b = baseDeLinea(l,i); return {
+    nombre: tx(l.nombre) || b.nombre,
+    simbolo: tx(l.simbolo) || b.simbolo,
+    color: tx(l.color) || b.color,
+    puntos: l.puntos,
+    observacion: tx(l.observacion) || b.observacion,
+    lectura: tx(l.lectura) || b.lectura
+  }; });
+}
+
 function renderResultado(){
   const a = estado.lectura || {};
   $('#res-nombre').textContent = estado.nombre || 'Viajero';
@@ -1048,12 +1148,16 @@ function renderResultado(){
       + '<div class="lc-txt">' + esc(a.error) + ' · Toca ↺ para intentar de nuevo.</div></div>';
     extraEl.hidden = true;
   } else {
-    saludoEl.textContent = a.saludo || '';
+    const lineas = lineasDeLectura(a);
+    saludoEl.textContent = a.saludo || ('Las líneas de tu palma están listas para hablar, ' + (estado.nombre || 'viajero') + '.');
     pista.style.display = '';
-    // Una tarjeta por línea (cada caja tiene su descripción, siempre visible)
-    cardsEl.innerHTML = (a.lineas || []).map((l,i) => {
+    // Una tarjeta por línea, colocada junto a su caja del diagrama
+    // (Vida↖ Corazón↗ Cabeza↙ Destino↘, igual que las cajitas del croquis).
+    const AREAS = ['vida','corazon','cabeza','destino'];
+    cardsEl.innerHTML = lineas.map((l,i) => {
       const col = PALETA[(l.color||'').toLowerCase()] || '#EBC878';
-      return '<div class="glass linea-card" id="lc-'+i+'" style="--c:'+col+'">'
+      const area = AREAS[i] || '';
+      return '<div class="glass linea-card" id="lc-'+i+'" style="grid-area:'+area+'; --c:'+col+'">'
         + '<div class="lc-tit" style="color:'+col+'">' + (l.simbolo ? esc(l.simbolo)+' ' : '') + esc(l.nombre||'') + '</div>'
         + (l.observacion ? '<div class="lc-obs">'+esc(l.observacion)+'</div>' : '')
         + '<div class="lc-txt">'+esc(l.lectura||'')+'</div></div>';
@@ -1064,7 +1168,8 @@ function renderResultado(){
     extraEl.innerHTML = extra; extraEl.hidden = !extra;
   }
   // Dibuja el diagrama de la mano (croquis + líneas de color + cajitas).
-  dibujarManoCanvas(estado.dataUrl, a.lineas || []);
+  // Usa las líneas reales si las hay; si no, las de respaldo (las cajas SIEMPRE salen).
+  dibujarManoCanvas(estado.dataUrl, a.error ? [] : lineasDeLectura(a));
 }
 
 /* ====================== CANVAS: croquis (visión por computadora) + líneas ====================== */
@@ -1108,6 +1213,37 @@ function _trazarPx(ctx, pts, color, w, f, glow){
   ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]);
   for(let i=1;i<=k;i++) ctx.lineTo(pts[i][0], pts[i][1]);
   ctx.stroke(); ctx.restore();
+}
+
+/* ---- Líneas REALES: usa los "puntos" que la IA marcó sobre la foto ---- */
+// Acepta [[x,y],...] o [{x,y},...]; descarta lo que no sirva.
+function _xy(p){ return Array.isArray(p) ? [+p[0], +p[1]] : [+(p&&p.x), +(p&&p.y)]; }
+function puntosValidos(p){
+  if(!Array.isArray(p) || p.length < 3) return false;
+  return p.every(q => { const a=_xy(q); return isFinite(a[0]) && isFinite(a[1]); });
+}
+// Normaliza a [0..1]: si la IA devolvió escala 0–100 (o píxeles), la reduce.
+function puntosNorm(p){
+  const a = p.map(_xy);
+  let mx = 0; a.forEach(q => { mx = Math.max(mx, Math.abs(q[0]), Math.abs(q[1])); });
+  const s = mx > 1.5 ? (mx > 120 ? 1/mx : 1/100) : 1;
+  return a.map(q => [clamp01(q[0]*s), clamp01(q[1]*s)]);
+}
+// Suaviza una polilínea (Catmull-Rom) para que el trazo siga curvo y natural.
+function suavizar(pts, n){
+  const N = pts.length; if(N < 3) return pts;
+  const out=[]; const seg = Math.max(2, Math.round(n/(N-1)));
+  for(let i=0;i<N-1;i++){
+    const p0=pts[Math.max(0,i-1)], p1=pts[i], p2=pts[i+1], p3=pts[Math.min(N-1,i+2)];
+    for(let j=0;j<seg;j++){
+      const t=j/seg, t2=t*t, t3=t2*t;
+      out.push([
+        0.5*((2*p1[0]) + (-p0[0]+p2[0])*t + (2*p0[0]-5*p1[0]+4*p2[0]-p3[0])*t2 + (-p0[0]+3*p1[0]-3*p2[0]+p3[0])*t3),
+        0.5*((2*p1[1]) + (-p0[1]+p2[1])*t + (2*p0[1]-5*p1[1]+4*p2[1]-p3[1])*t2 + (-p0[1]+3*p1[1]-3*p2[1]+p3[1])*t3)
+      ]);
+    }
+  }
+  out.push(pts[N-1]); return out;
 }
 
 // Yemas (espacio 100x133): nodos brillantes con etiqueta tipo escaneo, como la referencia.
@@ -1162,17 +1298,44 @@ function dibujarManoCanvas(dataUrl, lineas){
   const ctx = cvn.getContext('2d'), W = cvn.width, H = cvn.height;
   const lerp = (a,b,t)=>[a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t];
 
-  // Rect de la foto dentro del canvas (modo "contain", sin recortar la mano).
-  function contain(){ if(!imgOK || !img.width) return {dx:0,dy:0,dw:W,dh:H};
+  // VISTA del canvas: si MediaPipe detectó la mano, RECORTAMOS (zoom) a la mano para
+  // un escaneo nítido y centrado; si no, mostramos la foto completa ("contain").
+  // Devuelve paint() (pinta la foto) y M(nx,ny) (mapea coords 0..1 de la imagen → canvas).
+  function vista(){
+    if(!imgOK || !img.width) return { paint(){}, M:(nx,ny)=>[nx*W, ny*H], cropped:false };
+    const lm = estado.landmarks;
+    if(lm && lm.length >= 21){
+      let minx=1,miny=1,maxx=0,maxy=0;
+      for(const p of lm){ if(p.x<minx)minx=p.x; if(p.y<miny)miny=p.y; if(p.x>maxx)maxx=p.x; if(p.y>maxy)maxy=p.y; }
+      const bw=Math.max(1e-3,maxx-minx), bh=Math.max(1e-3,maxy-miny);
+      // Margen alrededor de la mano (más arriba para no cortar las yemas).
+      minx-=bw*0.26; maxx+=bw*0.26; miny-=bh*0.30; maxy+=bh*0.20;
+      let sx=minx*img.width, sy=miny*img.height, sw=(maxx-minx)*img.width, sh=(maxy-miny)*img.height;
+      // Ajustamos el recorte a la relación del canvas (cover), centrado en la mano.
+      const cr=W/H, cx=sx+sw/2, cy=sy+sh/2;
+      if(sw/sh > cr) sh = sw/cr; else sw = sh*cr;
+      sx=cx-sw/2; sy=cy-sh/2;
+      // Sin salirnos de la imagen.
+      if(sw>img.width){ sw=img.width; } sx=Math.max(0,Math.min(sx,img.width-sw));
+      if(sh>img.height){ sh=img.height; } sy=Math.max(0,Math.min(sy,img.height-sh));
+      return {
+        paint(){ ctx.drawImage(img, sx,sy,sw,sh, 0,0,W,H); },
+        M:(nx,ny)=>[ (nx*img.width - sx)/sw*W, (ny*img.height - sy)/sh*H ],
+        cropped:true
+      };
+    }
+    // Sin detección: foto completa con letterbox.
     const ir=img.width/img.height, cr=W/H; let dw,dh;
     if(ir>cr){ dw=W; dh=W/ir; } else { dh=H; dw=H*ir; }
-    return { dx:(W-dw)/2, dy:(H-dh)/2, dw, dh }; }
+    const dx=(W-dw)/2, dy=(H-dh)/2;
+    return { paint(){ ctx.drawImage(img, dx,dy,dw,dh); }, M:(nx,ny)=>[dx+nx*dw, dy+ny*dh], cropped:false };
+  }
 
-  // Las 4 líneas mayores, ancladas a la mano REAL detectada (o patrón genérico).
-  function construirLineas(d){
+  // Líneas ancladas a los 21 puntos REALES de la mano (MediaPipe) → posición precisa.
+  function anatomicas(M){
     const lm = estado.landmarks;
     if(lm && lm.length >= 18){
-      const g = i => [ d.dx + lm[i].x*d.dw, d.dy + lm[i].y*d.dh ];
+      const g = i => M(lm[i].x, lm[i].y);
       const wrist=g(0), thumb=g(2), idx=g(5), mid=g(9), pinky=g(17);
       const center=[ (wrist[0]+idx[0]+pinky[0])/3, (wrist[1]+idx[1]+pinky[1])/3 ];
       const vida    = _quad(lerp(idx,thumb,0.45), lerp(thumb,center,0.25), lerp(wrist,thumb,0.45), 46); // rodea el pulgar
@@ -1182,22 +1345,35 @@ function dibujarManoCanvas(dataUrl, lineas){
       return [vida, corazon, cabeza, destino];
     }
     // Sin detección: plantilla mapeada sobre la foto (aproximada).
-    const m = (x,y) => [ d.dx + (x/100)*d.dw, d.dy + (y/133)*d.dh ];
+    const m = (x,y) => M(x/100, y/133);
     return BASE_LINEAS.map(b => _quad(m(b.p0[0],b.p0[1]), m(b.c[0],b.c[1]), m(b.p2[0],b.p2[1]), 46));
+  }
+
+  // Las 4 líneas mayores. Con mano detectada, las líneas ancladas a los 21 puntos son
+  // MÁS precisas que las coordenadas de la IA → se usan esas. Sin detección, intentamos
+  // el trazo que observó la IA (l.puntos) y, si falta, la plantilla.
+  function construirLineas(M){
+    const lm = estado.landmarks;
+    const base = anatomicas(M);
+    if(lm && lm.length >= 18) return base;
+    return (L.length ? L : base.map(()=>({}))).map((l,i) => {
+      if(l && puntosValidos(l.puntos)) return suavizar(puntosNorm(l.puntos).map(q => M(q[0],q[1])), 46);
+      return base[i] || base[base.length-1];
+    });
   }
 
   const inicio = performance.now();
   function frame(now){
     if(token !== _animToken) return;
     const t = now - inicio, T = t/1000;
-    const d = contain();
-    const palmas = construirLineas(d);
+    const view = vista();
+    const palmas = construirLineas(view.M);
 
-    // Fondo + FOTO REAL (sin filtro azul; leve oscurecido para que resalten las líneas)
+    // Fondo + FOTO REAL (recortada a la mano si se detectó; leve oscurecido para que resalten las líneas)
     ctx.globalCompositeOperation = 'source-over';
     ctx.fillStyle = '#070617'; ctx.fillRect(0,0,W,H);
     if(imgOK){
-      ctx.drawImage(img, d.dx, d.dy, d.dw, d.dh);
+      view.paint();
       const og = ctx.createLinearGradient(0,0,0,H); og.addColorStop(0,'rgba(6,5,20,.22)'); og.addColorStop(1,'rgba(6,5,20,.5)');
       ctx.fillStyle = og; ctx.fillRect(0,0,W,H);
     }
@@ -1266,7 +1442,7 @@ $('#btn-reiniciar2').addEventListener('click', nuevaLectura);
 function compilarPrediccion(){
   const a = estado.lectura || {}; const partes = [];
   if(a.saludo) partes.push(a.saludo);
-  (a.lineas || []).forEach(l => {
+  lineasDeLectura(a).forEach(l => {   // 4 líneas completas (incluye Destino)
     let t = (l.nombre ? l.nombre + '. ' : '');
     if(l.observacion) t += l.observacion + ' ';
     t += (l.lectura || '');
