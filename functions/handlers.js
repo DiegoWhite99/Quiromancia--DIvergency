@@ -95,12 +95,13 @@ Mira la fotografía con muchísima atención y MIDE rasgos concretos y visibles 
 2. Dedos: ¿son largos o cortos respecto a la palma? ¿Cuál destaca o se ve más largo? ¿Están juntos o separados? ¿Cómo es el pulgar (ancho, flexible, su ángulo)?
 3. Para CADA una de las cuatro líneas, fíjate de verdad: dónde NACE y dónde TERMINA, si es LARGA o CORTA, PROFUNDA o TENUE, RECTA o CURVA, y si tiene cadenas, islas, ramas (hacia arriba o abajo), cortes, cruces, estrellas o rejillas.
 4. Marcas especiales que veas en la palma (cruces, estrellas, triángulos, rejillas, lunares).
-NO inventes un rasgo que no se vea; si una zona no se aprecia bien, di lo que SÍ alcanzas a ver y básate en eso.
+Prioriza lo que SÍ alcances a ver; pero si la foto está borrosa, oscura, de lejos o la mano se ve pequeña o ladeada, NO te detengas: completa con la interpretación típica de una mano y entrega igualmente la lectura. Lo importante es SIEMPRE dar una lectura, nunca quedarte sin responder.
 
 UBICACIÓN REAL DE LAS LÍNEAS EN LA FOTO (campo "puntos"):
 Para CADA línea, traza POR DÓNDE PASA REALMENTE en ESTA fotografía y devuelve de 3 a 5 coordenadas [x,y] NORMALIZADAS y REDONDEADAS A 2 DECIMALES (x=0 borde izquierdo, x=1 borde derecho; y=0 arriba, y=1 abajo; ej. [0.42,0.55]) que sigan el surco real de principio a fin, EN ORDEN. Las coordenadas DEBEN caer sobre la palma de la foto. El campo "puntos" es OPCIONAL: si no logras ubicar una línea, OMITE solo su "puntos" — pero NUNCA omitas su "observacion" ni su "lectura". Como guía anatómica: la VIDA rodea la base del pulgar; el CORAZÓN es el arco alto bajo los dedos; la CABEZA cruza el centro de la palma; el DESTINO sube casi vertical hacia el dedo medio.
 
 Reglas:
+- REGLA #1 (la más importante): SIEMPRE entrega una lectura COMPLETA de las 4 líneas, pase lo que pase. Aunque la foto esté borrosa, oscura, tomada de lejos, con la mano pequeña, ladeada, con sombras o solo se vea parte de la palma, INTERPRETA lo que puedas y completa el resto con la lectura típica de una mano. Mientras se intuya una mano, hazlo. JAMÁS devuelvas el resultado vacío, JAMÁS digas que la imagen no sirve o que no puedes leerla, JAMÁS pidas otra foto. Eso está terminantemente PROHIBIDO.
 - Enfócate EXCLUSIVAMENTE en la QUIROMANCIA: las líneas, los montes y la forma de la mano. NO uses astrología, signos zodiacales ni horóscopos.
 - Para CADA línea, el campo "observacion" DEBE citar al menos DOS rasgos concretos y visibles de ESA línea en ESTA palma (su recorrido, largo, profundidad, curva, cadenas, islas, ramas, cortes...). LUEGO, en "lectura", interpreta exactamente eso que observaste: la lectura tiene que derivarse de la observación, no al revés.
 - PROHIBIDO LO GENÉRICO: si una frase podría aplicarse a CUALQUIER mano, está MAL escrita; reescríbela citando un detalle concreto que VES en la foto. Dos personas distintas DEBEN recibir lecturas claramente diferentes entre sí. Nunca uses una plantilla fija ni repitas las mismas frases hechas; varía el vocabulario y los matices según lo que muestre cada palma.
@@ -222,17 +223,19 @@ async function handleLectura(body) {
   txt = txt.replace(/^```(json)?/i, '').replace(/```$/, '').trim();
 
   // Parseo tolerante: si el JSON viene completo, perfecto; si vino cortado
-  // (p.ej. por longitud), intentamos recuperar el bloque y, si no, fallamos
-  // limpiamente para que el front pida repetir la foto (no pantalla en blanco).
+  // (p.ej. por longitud), intentamos recuperar el bloque.
   let lectura = null;
   try { lectura = JSON.parse(txt); }
   catch (e) {
     const mm = txt.match(/\{[\s\S]*\}/);
     if (mm) { try { lectura = JSON.parse(mm[0]); } catch (_) { lectura = null; } }
   }
-  const ok = lectura && Array.isArray(lectura.lineas) && lectura.lineas.length >= 1;
-  if (!ok) {
-    return { status: 200, data: { lectura: { error: 'No pudimos leer tu palma con claridad. Vuelve a tomar la foto.' } } };
+  // Tolerancia MÁXIMA: NUNCA bloqueamos por la foto. Si no pudimos interpretar el
+  // JSON, devolvemos un objeto vacío SIN error; el front rellena las 4 líneas con su
+  // respaldo y SIEMPRE muestra una lectura. El aviso de "repetir foto" queda solo
+  // para fallos técnicos reales (error de red/API, que se manejan más arriba).
+  if (!lectura || typeof lectura !== 'object') {
+    return { status: 200, data: { lectura: {} } };
   }
   return { status: 200, data: { lectura } };
 }

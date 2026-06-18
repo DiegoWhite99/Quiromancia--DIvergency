@@ -1104,8 +1104,9 @@ async function iniciarLectura(){
   $('#modal-disclaimer').classList.add('activo');
 }
 
-// Una lectura es válida si trae al menos una línea (las cajas salen de aquí).
-function lecturaUsable(a){ return !!(a && !a.error && Array.isArray(a.lineas) && a.lineas.length >= 1); }
+// Tolerancia ALTA: la lectura es válida salvo que haya un error técnico real.
+// Si vino incompleta (sin líneas), igual se muestra: el respaldo rellena las 4 cajas.
+function lecturaUsable(a){ return !!(a && !a.error); }
 function mensajeReintento(a){
   const e = (a && a.error) ? String(a.error) : '';
   // Solo mostramos mensajes amables (los del servidor); ocultamos errores técnicos.
