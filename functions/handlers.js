@@ -2,6 +2,36 @@
 // Funciones puras (sin framework): las usan tanto las Cloud Functions como el
 // servidor local de desarrollo. Devuelven { status, data }.
 
+const fs = require('fs');
+const path = require('path');
+
+// Carga (y cachea) el tratado de quiromancia (public/docs/quiromancia.txt) para
+// REFORZAR las lecturas. Se queda con la parte interpretativa (de "LOS MONTES" en
+// adelante: montes, llanos y todas las líneas), saltando la historia inicial.
+let _guiaCache = null;
+function guiaTratado() {
+  if (_guiaCache !== null) return _guiaCache;
+  const candidatos = [
+    path.join(__dirname, '..', 'public', 'docs', 'quiromancia.txt'),
+    path.join(__dirname, 'quiromancia.txt'),
+    path.join(process.cwd(), 'public', 'docs', 'quiromancia.txt')
+  ];
+  let txt = '';
+  for (const p of candidatos) {
+    try { if (fs.existsSync(p)) { txt = fs.readFileSync(p, 'utf8'); break; } } catch (e) {}
+  }
+  if (txt) {
+    let i = txt.indexOf('LOS MONTES');
+    if (i < 0) i = txt.indexOf('LOS DEDOS');
+    if (i > 0) txt = txt.slice(i);
+    txt = txt.replace(/\r/g, '').replace(/\n{3,}/g, '\n\n').trim();
+    const MAX = 50000;   // ~12k tokens; con la caché de prompt apenas pesa en repeticiones
+    if (txt.length > MAX) txt = txt.slice(0, MAX);
+  }
+  _guiaCache = txt;
+  return _guiaCache;
+}
+
 // Modelo de VISIÓN. gpt-4o-mini casi no "mira" la foto y devuelve lecturas
 // genéricas iguales para todos; gpt-4o sí analiza la imagen con detalle.
 // Se puede sobreescribir con OPENAI_MODEL en el entorno.
@@ -28,7 +58,7 @@ const MODOS = {
 // Prompt de la lectura: quiromancia pura (SIN astrología), por líneas, en JSON.
 function construirSystemLectura(modo) {
   const m = MODOS[modo] || MODOS.mistico;
-  return `Eres un quiromante experto de "Divergency". Analizas EN DETALLE la fotografía de la palma de una mano.
+  const base = `Eres un quiromante experto de "Divergency". Analizas EN DETALLE la fotografía de la palma de una mano.
 
 ${m.personalidad}
 
@@ -94,6 +124,12 @@ Reglas:
   "consejos": ["consejo breve 1 sobre el tema elegido", "consejo breve 2", "consejo breve 3 (opcional)"],
   "cierre": "1 frase de cierre inspirador, en tu estilo"
 }`;
+  // Refuerzo: tratado de quiromancia (public/docs/quiromancia.txt) como referencia ampliada.
+  const guia = guiaTratado();
+  const ref = guia
+    ? `\n\n=== TRATADO DE QUIROMANCIA (referencia ampliada) ===\nApóyate en este tratado para INTERPRETAR con más profundidad, precisión y vocabulario variado lo que observas en la palma (montes, llanos y líneas). Respeta SIEMPRE las reglas de formato, brevedad y ENFOQUE POR TEMA de arriba; NO copies frases literales del tratado: úsalo como conocimiento para variar y enriquecer cada lectura.\n\n${guia}`
+    : '';
+  return base + ref;
 }
 
 const apiKey = () => process.env.OPENAI_API_KEY;
