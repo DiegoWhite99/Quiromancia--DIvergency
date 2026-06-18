@@ -2,6 +2,39 @@
 // Funciones puras (sin framework): las usan tanto las Cloud Functions como el
 // servidor local de desarrollo. Devuelven { status, data }.
 
+const fs = require('fs');
+const path = require('path');
+
+// Carga (y cachea) el tratado de quiromancia (public/docs/quiromancia.txt) para
+// REFORZAR las lecturas. Se queda con la parte interpretativa (de "LOS MONTES" en
+// adelante: montes, llanos y todas las líneas), saltando la historia inicial.
+let _guiaCache = null;
+function guiaTratado() {
+  if (_guiaCache !== null) return _guiaCache;
+  const candidatos = [
+    path.join(__dirname, '..', 'public', 'docs', 'quiromancia.txt'),
+    path.join(__dirname, 'quiromancia.txt'),
+    path.join(process.cwd(), 'public', 'docs', 'quiromancia.txt')
+  ];
+  let txt = '';
+  for (const p of candidatos) {
+    try { if (fs.existsSync(p)) { txt = fs.readFileSync(p, 'utf8'); break; } } catch (e) {}
+  }
+  if (txt) {
+    // Nos quedamos con lo MÁS útil para una lectura (las líneas) y recortamos fuerte
+    // para que el prompt no pese demasiado: peticiones más rápidas y fiables.
+    let i = txt.indexOf('LAS LÍNEAS');
+    if (i < 0) i = txt.indexOf('LOS MONTES');
+    if (i < 0) i = txt.indexOf('LOS DEDOS');
+    if (i > 0) txt = txt.slice(i);
+    txt = txt.replace(/\r/g, '').replace(/\n{3,}/g, '\n\n').trim();
+    const MAX = 16000;   // ~4k tokens (antes ~12k): mucho más ligero
+    if (txt.length > MAX) txt = txt.slice(0, MAX);
+  }
+  _guiaCache = txt;
+  return _guiaCache;
+}
+
 // Modelo de VISIÓN. gpt-4o-mini casi no "mira" la foto y devuelve lecturas
 // genéricas iguales para todos; gpt-4o sí analiza la imagen con detalle.
 // Se puede sobreescribir con OPENAI_MODEL en el entorno.
@@ -28,7 +61,7 @@ const MODOS = {
 // Prompt de la lectura: quiromancia pura (SIN astrología), por líneas, en JSON.
 function construirSystemLectura(modo) {
   const m = MODOS[modo] || MODOS.mistico;
-  return `Eres un quiromante experto de "Divergency". Analizas EN DETALLE la fotografía de la palma de una mano.
+  const base = `Eres un quiromante experto de "Divergency". Analizas EN DETALLE la fotografía de la palma de una mano.
 
 ${m.personalidad}
 
@@ -65,32 +98,42 @@ Mira la fotografía con muchísima atención y MIDE rasgos concretos y visibles 
 2. Dedos: ¿son largos o cortos respecto a la palma? ¿Cuál destaca o se ve más largo? ¿Están juntos o separados? ¿Cómo es el pulgar (ancho, flexible, su ángulo)?
 3. Para CADA una de las cuatro líneas, fíjate de verdad: dónde NACE y dónde TERMINA, si es LARGA o CORTA, PROFUNDA o TENUE, RECTA o CURVA, y si tiene cadenas, islas, ramas (hacia arriba o abajo), cortes, cruces, estrellas o rejillas.
 4. Marcas especiales que veas en la palma (cruces, estrellas, triángulos, rejillas, lunares).
-NO inventes un rasgo que no se vea; si una zona no se aprecia bien, di lo que SÍ alcanzas a ver y básate en eso.
+Prioriza lo que SÍ alcances a ver; pero si la foto está borrosa, oscura, de lejos o la mano se ve pequeña o ladeada, NO te detengas: completa con la interpretación típica de una mano y entrega igualmente la lectura. Lo importante es SIEMPRE dar una lectura, nunca quedarte sin responder.
 
 UBICACIÓN REAL DE LAS LÍNEAS EN LA FOTO (campo "puntos"):
 Para CADA línea, traza POR DÓNDE PASA REALMENTE en ESTA fotografía y devuelve de 3 a 5 coordenadas [x,y] NORMALIZADAS y REDONDEADAS A 2 DECIMALES (x=0 borde izquierdo, x=1 borde derecho; y=0 arriba, y=1 abajo; ej. [0.42,0.55]) que sigan el surco real de principio a fin, EN ORDEN. Las coordenadas DEBEN caer sobre la palma de la foto. El campo "puntos" es OPCIONAL: si no logras ubicar una línea, OMITE solo su "puntos" — pero NUNCA omitas su "observacion" ni su "lectura". Como guía anatómica: la VIDA rodea la base del pulgar; el CORAZÓN es el arco alto bajo los dedos; la CABEZA cruza el centro de la palma; el DESTINO sube casi vertical hacia el dedo medio.
 
 Reglas:
+- REGLA #1 (la más importante): SIEMPRE entrega una lectura COMPLETA de las 4 líneas, pase lo que pase. Aunque la foto esté borrosa, oscura, tomada de lejos, con la mano pequeña, ladeada, con sombras o solo se vea parte de la palma, INTERPRETA lo que puedas y completa el resto con la lectura típica de una mano. Mientras se intuya una mano, hazlo. JAMÁS devuelvas el resultado vacío, JAMÁS digas que la imagen no sirve o que no puedes leerla, JAMÁS pidas otra foto. Eso está terminantemente PROHIBIDO.
 - Enfócate EXCLUSIVAMENTE en la QUIROMANCIA: las líneas, los montes y la forma de la mano. NO uses astrología, signos zodiacales ni horóscopos.
 - Para CADA línea, el campo "observacion" DEBE citar al menos DOS rasgos concretos y visibles de ESA línea en ESTA palma (su recorrido, largo, profundidad, curva, cadenas, islas, ramas, cortes...). LUEGO, en "lectura", interpreta exactamente eso que observaste: la lectura tiene que derivarse de la observación, no al revés.
 - PROHIBIDO LO GENÉRICO: si una frase podría aplicarse a CUALQUIER mano, está MAL escrita; reescríbela citando un detalle concreto que VES en la foto. Dos personas distintas DEBEN recibir lecturas claramente diferentes entre sí. Nunca uses una plantilla fija ni repitas las mismas frases hechas; varía el vocabulario y los matices según lo que muestre cada palma.
 - PERSONALIZA con los datos de la persona: dirígete a ella por su NOMBRE con naturalidad y AJUSTA el énfasis a su ETAPA DE VIDA (si es joven, proyecta hacia el futuro que se abre ante ella; si tiene más años, reconoce su trayectoria y confirma su camino). La mano IZQUIERDA habla de lo heredado, el pasado y el mundo interior; la DERECHA, de lo que se está forjando hacia el futuro y el mundo exterior: matiza la lectura según cuál sea. NO uses el zodíaco ni inventes datos que no observes.
-- Las lecturas deben ser BREVES y potentes: 1 o 2 frases por línea (máximo ~25 palabras cada una), directas, afirmativas y en segunda persona. TODA la lectura debe poder leerse en voz alta en cerca de 1 minuto (en total, unas 150 palabras). Ejemplo del tono (NO lo copies literal): "Tu línea de la vida nace pegada a la de la cabeza y se ensancha cerca de la muñeca: revela cautela al empezar y una vitalidad que florece con los años." Evita frases vagas, pero NO te extiendas ni hagas párrafos largos.
+- Las lecturas deben ser potentes y con sustancia: 2 o 3 frases por línea (máximo ~40 palabras cada una), directas, afirmativas y en segunda persona. TODA la lectura debe poder leerse en voz alta en cerca de minuto y medio (en total, unas 210 palabras). Ejemplo del tono (NO lo copies literal): "Tu línea de la vida nace pegada a la de la cabeza y se ensancha cerca de la muñeca: revela cautela al empezar y una vitalidad que florece con los años." Evita frases vagas y relleno, pero da una lectura rica y desarrollada.
+- ENFOQUE POR TEMA: si la persona eligió un tema de interés (amor, dinero, trabajo, familia o salud), ENFOCA cerca del 80% de la lectura en ese tema: interpreta CADA línea desde esa óptica (qué dice tu mano sobre ESE tema) y resalta lo que más le importa; el 20% restante, una visión general. Si el tema es "general", reparte el enfoque de forma equilibrada.
+- CONSEJOS: termina SIEMPRE con "consejos": 2 o 3 recomendaciones breves, prácticas y en tu estilo, relacionadas con el tema elegido (p. ej. dinero: "Cuida lo que gastas y aparta un ahorro cada mes"; amor: "Escucha de verdad y di lo que sientes"; trabajo: "Apuesta por lo que se te da bien"). Son guiños de oráculo para reflexionar, NO órdenes.
 - OBLIGATORIO: NUNCA dejes el arreglo "lineas" vacío ni dejes "observacion"/"lectura" en blanco. SIEMPRE devuelve las CUATRO líneas mayores (vida, corazón, cabeza, destino), cada una con su lectura propia y DISTINTA de las demás. Aunque la mano se vea pequeña, lejana, mal iluminada o la foto no sea perfecta, haz tu MEJOR interpretación con lo que SÍ alcances a ver; jamás devuelvas campos vacíos ni te niegues. En "montes" describe la forma real de la mano y los dedos que observaste (cuadrada/alargada, dedos largos/cortos, pulgar) y relaciónalo con los montes.
 - A cada línea asígnale un "color" según el significado DOMINANTE de lo que revela, eligiendo SOLO uno de estos: "verde" (vida, vitalidad, salud), "azul" (riqueza, prosperidad, abundancia, mente), "rosa" (amor, afectos), "dorado" (destino, éxito, fortuna), "morado" (intuición, espiritualidad) o "rojo" (advertencias o aspectos difíciles). Normalmente: Vida→verde, Corazón→rosa, Cabeza→azul, Destino→dorado; usa "rojo" solo si esa línea muestra algo que conviene cuidar.
-- Tono positivo e inspirador (respetando tu personalidad). Es para entretenimiento y autorreflexión: sin consejos médicos, legales o financieros, ni fechas exactas.
+- Tono positivo e inspirador (respetando tu personalidad). Es para entretenimiento y autorreflexión: los "consejos" son sugerencias ligeras y positivas en clave de oráculo, NO asesoría médica, legal ni financiera profesional ni diagnósticos; no des fechas exactas.
 - Responde EXCLUSIVAMENTE con un objeto JSON válido (sin markdown ni texto extra), con EXACTAMENTE esta forma:
 {
   "saludo": "1 frase breve de bienvenida usando el nombre, en tu estilo",
   "lineas": [
-    {"nombre":"Línea de la Vida","simbolo":"🌿","color":"verde","puntos":[[x,y],[x,y],[x,y],[x,y],[x,y]],"observacion":"1 frase corta sobre cómo se ve esta línea en su palma","lectura":"1-2 frases de interpretación directa (máx ~25 palabras)"},
+    {"nombre":"Línea de la Vida","simbolo":"🌿","color":"verde","puntos":[[x,y],[x,y],[x,y],[x,y],[x,y]],"observacion":"1 frase corta sobre cómo se ve esta línea en su palma","lectura":"2-3 frases de interpretación directa (máx ~40 palabras), enfocadas en el tema elegido"},
     {"nombre":"Línea del Corazón","simbolo":"❤️","color":"rosa","puntos":[[x,y],...],"observacion":"...","lectura":"..."},
     {"nombre":"Línea de la Cabeza","simbolo":"🧠","color":"azul","puntos":[[x,y],...],"observacion":"...","lectura":"..."},
     {"nombre":"Línea del Destino","simbolo":"⭐","color":"dorado","puntos":[[x,y],...],"observacion":"...","lectura":"..."}
   ],
   "montes": "1-2 frases sobre los montes (Venus, Júpiter, Apolo) y la forma de la mano",
+  "consejos": ["consejo breve 1 sobre el tema elegido", "consejo breve 2", "consejo breve 3 (opcional)"],
   "cierre": "1 frase de cierre inspirador, en tu estilo"
 }`;
+  // Refuerzo: tratado de quiromancia (public/docs/quiromancia.txt) como referencia ampliada.
+  const guia = guiaTratado();
+  const ref = guia
+    ? `\n\n=== TRATADO DE QUIROMANCIA (referencia ampliada) ===\nApóyate en este tratado para INTERPRETAR con más profundidad, precisión y vocabulario variado lo que observas en la palma (montes, llanos y líneas). Respeta SIEMPRE las reglas de formato, brevedad y ENFOQUE POR TEMA de arriba; NO copies frases literales del tratado: úsalo como conocimiento para variar y enriquecer cada lectura.\n\n${guia}`
+    : '';
+  return base + ref;
 }
 
 // En la nube usa el secret dedicado QUIROMANCIA_OPENAI_API_KEY; en local cae a
@@ -131,54 +174,79 @@ async function handleLectura(body) {
   const manoTxt = ((body.mano || 'derecha') === 'izquierda')
     ? 'izquierda (lo heredado, el pasado y el mundo interior)'
     : 'derecha (lo que se forja hacia el futuro y el mundo exterior)';
+  // Tema de enfoque elegido en la botonera (después de la foto).
+  const TEMAS = {
+    amor: 'el AMOR y las relaciones', dinero: 'el DINERO y la prosperidad',
+    trabajo: 'el TRABAJO y la vocación', familia: 'la FAMILIA y los vínculos',
+    salud: 'la SALUD y la energía vital'
+  };
+  // Cómo conectar CADA línea con el tema, para que la lectura SÍ hable del tema.
+  const ENFOQUE_LINEAS = {
+    amor: 'Vida→tu vitalidad y pasión en los vínculos; Corazón→tu manera de amar y de ser amada(o); Cabeza→cómo piensas y decides en pareja; Destino→con quién y hacia dónde va tu vida sentimental.',
+    dinero: 'Vida→tu empuje y energía para trabajar y generar ingresos; Corazón→tu relación emocional con el dinero (gastar, compartir, buscar seguridad); Cabeza→cómo tomas decisiones financieras y tu mentalidad de abundancia; Destino→tu camino profesional, tus negocios, tu fortuna y prosperidad.',
+    trabajo: 'Vida→tu energía y disciplina laboral; Corazón→tu pasión y motivación por lo que haces; Cabeza→tus talentos, lógica y forma de resolver; Destino→tu carrera, ascensos, vocación y propósito.',
+    familia: 'Vida→tus raíces y energía en el hogar; Corazón→tus lazos afectivos con los tuyos; Cabeza→cómo equilibras razón y familia; Destino→el peso de la familia en tu camino y tu hogar futuro.',
+    salud: 'Vida→tu vitalidad, resistencia y energía física; Corazón→tu bienestar emocional; Cabeza→tu mente, el estrés y el descanso; Destino→tus hábitos y el rumbo de tu bienestar.'
+  };
+  const temaKey = (body.tema || '').toLowerCase().trim();
+  const temaTxt = TEMAS[temaKey];
+  const enfoque = temaTxt
+    ? ` TEMA ELEGIDO: ${temaTxt}. ESTO ES LO MÁS IMPORTANTE: la lectura DEBE girar en torno a ${temaTxt}. Interpreta CADA una de las 4 líneas conectándola con ese tema así → ${ENFOQUE_LINEAS[temaKey]} La "lectura" de CADA línea TIENE QUE mencionar EXPLÍCITAMENTE ${temaTxt} (no de forma genérica), y TODOS los "consejos" deben ser sobre ${temaTxt}. Si una lectura no habla del tema, está MAL.`
+    : ` La persona quiere una visión GENERAL: reparte el enfoque entre vitalidad, amor, mente y destino, con consejos generales para la vida.`;
   const intro = `Persona: ${body.nombre || 'anónima'}.`
     + ` Mano fotografiada: ${manoTxt}.`
     + (edad != null ? ` Edad aproximada: ${edad} años — ${etapaVida(edad)}.` : '')
-    + (body.tema ? ` Le interesa especialmente: ${body.tema}.` : '')
+    + enfoque
     + ` Analiza con detalle ESTA fotografía de la palma siguiendo el protocolo de observación: mide la forma de la mano y los dedos, sigue el recorrido REAL de cada línea y devuelve sus "puntos" sobre la foto. Haz una lectura ÚNICA y PERSONAL —usa su nombre y su etapa de vida— basada en lo que de verdad ves aquí (otra persona debe recibir una lectura distinta). Responde en formato JSON.`;
 
-  const r = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', authorization: `Bearer ${apiKey()}` },
-    body: JSON.stringify({
-      model: MODELO,
-      max_tokens: 2200,
-      temperature: cfg.temperatura,
-      // Penaliza repetir las mismas palabras → menos frases hechas y más variedad real.
-      frequency_penalty: 0.4,
-      presence_penalty: 0.3,
-      response_format: { type: 'json_object' },
-      messages: [
-        { role: 'system', content: construirSystemLectura(modo) },
-        { role: 'user', content: [
-          { type: 'text', text: intro },
-          // detail:'high' → OpenAI analiza la palma en alta resolución (ve líneas finas)
-          // en vez de reducirla a una miniatura borrosa y dar una lectura genérica.
-          { type: 'image_url', image_url: { url: body.dataUrl, detail: 'high' } }
-        ] }
-      ]
-    })
-  });
-  if (!r.ok) { const t = await r.text(); return { status: r.status, data: { error: 'OpenAI: ' + t.slice(0, 300) } }; }
+  const cuerpo = {
+    model: MODELO,
+    max_tokens: 2600,
+    temperature: cfg.temperatura,
+    // Penaliza repetir las mismas palabras → menos frases hechas y más variedad real.
+    frequency_penalty: 0.4,
+    presence_penalty: 0.3,
+    response_format: { type: 'json_object' },
+    messages: [
+      { role: 'system', content: construirSystemLectura(modo) },
+      { role: 'user', content: [
+        { type: 'text', text: intro },
+        // detail:'high' → OpenAI analiza la palma en alta resolución (ve líneas finas).
+        { type: 'image_url', image_url: { url: body.dataUrl, detail: 'high' } }
+      ] }
+    ]
+  };
 
-  const data = await r.json();
-  let txt = (data.choices?.[0]?.message?.content || '').trim();
-  txt = txt.replace(/^```(json)?/i, '').replace(/```$/, '').trim();
-
-  // Parseo tolerante: si el JSON viene completo, perfecto; si vino cortado
-  // (p.ej. por longitud), intentamos recuperar el bloque y, si no, fallamos
-  // limpiamente para que el front pida repetir la foto (no pantalla en blanco).
+  // Hasta 3 intentos: si la API falla (lentitud, límite, error transitorio) o la
+  // respuesta viene vacía, reintentamos. NUNCA bloqueamos: tras los intentos
+  // devolvemos lo que tengamos (aunque sea vacío) y el front rellena las 4 líneas
+  // y SIEMPRE muestra una lectura. El aviso de "repetir foto" queda solo para que
+  // el navegador no pueda llegar al servidor (error de red real).
   let lectura = null;
-  try { lectura = JSON.parse(txt); }
-  catch (e) {
-    const mm = txt.match(/\{[\s\S]*\}/);
-    if (mm) { try { lectura = JSON.parse(mm[0]); } catch (_) { lectura = null; } }
+  for (let intento = 1; intento <= 3 && !lectura; intento++) {
+    try {
+      const r = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${apiKey()}` },
+        body: JSON.stringify(cuerpo)
+      });
+      if (!r.ok) continue;   // error de la API → reintenta
+      const data = await r.json();
+      let txt = (data.choices?.[0]?.message?.content || '').trim();
+      txt = txt.replace(/^```(json)?/i, '').replace(/```$/, '').trim();
+      let parsed = null;
+      try { parsed = JSON.parse(txt); }
+      catch (e) { const mm = txt.match(/\{[\s\S]*\}/); if (mm) { try { parsed = JSON.parse(mm[0]); } catch (_) {} } }
+      if (parsed && Array.isArray(parsed.lineas) && parsed.lineas.length) { lectura = parsed; break; }
+      if (parsed && typeof parsed === 'object') lectura = lectura || parsed; // guarda algo por si todos fallan
+    } catch (e) { /* error de red hacia OpenAI → reintenta */ }
   }
-  const ok = lectura && Array.isArray(lectura.lineas) && lectura.lineas.length >= 1;
-  if (!ok) {
-    return { status: 200, data: { lectura: { error: 'No pudimos leer tu palma con claridad. Vuelve a tomar la foto.' } } };
+  // Para depurar si la API está caída (clave/saldo): queda en los logs, no se muestra.
+  if (!lectura || !Array.isArray(lectura.lineas) || !lectura.lineas.length) {
+    try { console.warn('handleLectura: sin líneas tras 3 intentos (¿API/saldo de OpenAI?).'); } catch (e) {}
   }
-  return { status: 200, data: { lectura } };
+  // Siempre 200 con una lectura (real, parcial o vacía → el front la completa).
+  return { status: 200, data: { lectura: lectura || {} } };
 }
 
 async function handleTranscribe(body) {
