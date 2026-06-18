@@ -132,17 +132,25 @@ async function handleLectura(body) {
   const manoTxt = ((body.mano || 'derecha') === 'izquierda')
     ? 'izquierda (lo heredado, el pasado y el mundo interior)'
     : 'derecha (lo que se forja hacia el futuro y el mundo exterior)';
-  // Tema de enfoque elegido en la botonera del formulario.
+  // Tema de enfoque elegido en la botonera (después de la foto).
   const TEMAS = {
     amor: 'el AMOR y las relaciones', dinero: 'el DINERO y la prosperidad',
     trabajo: 'el TRABAJO y la vocación', familia: 'la FAMILIA y los vínculos',
     salud: 'la SALUD y la energía vital'
   };
+  // Cómo conectar CADA línea con el tema, para que la lectura SÍ hable del tema.
+  const ENFOQUE_LINEAS = {
+    amor: 'Vida→tu vitalidad y pasión en los vínculos; Corazón→tu manera de amar y de ser amada(o); Cabeza→cómo piensas y decides en pareja; Destino→con quién y hacia dónde va tu vida sentimental.',
+    dinero: 'Vida→tu empuje y energía para trabajar y generar ingresos; Corazón→tu relación emocional con el dinero (gastar, compartir, buscar seguridad); Cabeza→cómo tomas decisiones financieras y tu mentalidad de abundancia; Destino→tu camino profesional, tus negocios, tu fortuna y prosperidad.',
+    trabajo: 'Vida→tu energía y disciplina laboral; Corazón→tu pasión y motivación por lo que haces; Cabeza→tus talentos, lógica y forma de resolver; Destino→tu carrera, ascensos, vocación y propósito.',
+    familia: 'Vida→tus raíces y energía en el hogar; Corazón→tus lazos afectivos con los tuyos; Cabeza→cómo equilibras razón y familia; Destino→el peso de la familia en tu camino y tu hogar futuro.',
+    salud: 'Vida→tu vitalidad, resistencia y energía física; Corazón→tu bienestar emocional; Cabeza→tu mente, el estrés y el descanso; Destino→tus hábitos y el rumbo de tu bienestar.'
+  };
   const temaKey = (body.tema || '').toLowerCase().trim();
-  const temaTxt = TEMAS[temaKey] || (body.tema ? body.tema : '');
+  const temaTxt = TEMAS[temaKey];
   const enfoque = temaTxt
-    ? ` ENFÓCATE sobre todo en ${temaTxt}: dedica cerca del 80% de la lectura a ese tema (interpreta cada línea desde esa óptica) y CIERRA con consejos prácticos sobre ${temaTxt}.`
-    : ` La persona quiere una visión general: reparte el enfoque y da consejos generales para la vida.`;
+    ? ` TEMA ELEGIDO: ${temaTxt}. ESTO ES LO MÁS IMPORTANTE: la lectura DEBE girar en torno a ${temaTxt}. Interpreta CADA una de las 4 líneas conectándola con ese tema así → ${ENFOQUE_LINEAS[temaKey]} La "lectura" de CADA línea TIENE QUE mencionar EXPLÍCITAMENTE ${temaTxt} (no de forma genérica), y TODOS los "consejos" deben ser sobre ${temaTxt}. Si una lectura no habla del tema, está MAL.`
+    : ` La persona quiere una visión GENERAL: reparte el enfoque entre vitalidad, amor, mente y destino, con consejos generales para la vida.`;
   const intro = `Persona: ${body.nombre || 'anónima'}.`
     + ` Mano fotografiada: ${manoTxt}.`
     + (edad != null ? ` Edad aproximada: ${edad} años — ${etapaVida(edad)}.` : '')

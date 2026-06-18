@@ -232,6 +232,10 @@
   .temas button .ti{ font-size:22px; line-height:1; }
   .temas button.sel{ color:#fff; border-color:transparent;
     background:linear-gradient(135deg,var(--azul),var(--azul-claro)); box-shadow:0 8px 22px -10px rgba(33,33,222,.9); transform:translateY(-1px); }
+  /* Variante grande para la pantalla de enfoque (después de la foto). */
+  .temas-xl{ gap:10px; }
+  .temas-xl button{ padding:18px 8px; font-size:14.5px; border-radius:16px; gap:7px; }
+  .temas-xl button .ti{ font-size:28px; }
 
   /* ---------- Cámara ---------- */
   #pantalla-camara{ gap:16px; align-items:center; }
@@ -598,17 +602,6 @@
         <input id="in-fecha" type="date" min="1900-01-01" max="2025-12-31" />
         <div id="signo-auto" class="signo-auto" hidden></div>
       </div>
-      <div class="campo">
-        <label>¿Qué quieres saber? <span style="text-transform:none; font-weight:400">Elige tu enfoque</span></label>
-        <div class="temas" id="seg-tema">
-          <button type="button" data-val="" class="sel"><span class="ti">🔮</span>Todo</button>
-          <button type="button" data-val="amor"><span class="ti">💖</span>Amor</button>
-          <button type="button" data-val="dinero"><span class="ti">💰</span>Dinero</button>
-          <button type="button" data-val="trabajo"><span class="ti">💼</span>Trabajo</button>
-          <button type="button" data-val="familia"><span class="ti">👨‍👩‍👧</span>Familia</button>
-          <button type="button" data-val="salud"><span class="ti">🌿</span>Salud</button>
-        </div>
-      </div>
       <p class="nota" id="nota-lecturas" style="text-align:left; margin:0"></p>
       <div class="err" id="err-form"></div>
       <div class="fila" style="gap:12px">
@@ -651,6 +644,29 @@
     </div>
     <input id="file-input" type="file" accept="image/*" capture="environment" style="display:none" />
     <div class="err" id="err-camara"></div>
+  </section>
+
+  <!-- ============ ENFOQUE (qué quiere saber el usuario) ============ -->
+  <section class="screen" id="pantalla-tema">
+    <div style="text-align:center; margin-bottom:10px">
+      <div class="marca">Tu enfoque</div>
+      <h2 style="font-size:25px; margin-top:12px">¿Qué quieres saber?</h2>
+      <p class="mute" style="font-size:14px; margin-top:6px; max-width:420px">Elige un tema y tu lectura se centrará en él. Si eliges “Todo”, será una lectura general.</p>
+    </div>
+    <div class="glass" style="padding:18px; width:100%; max-width:440px; margin:0 auto">
+      <div class="temas temas-xl" id="seg-tema">
+        <button type="button" data-val="" class="sel"><span class="ti">🔮</span>Todo</button>
+        <button type="button" data-val="amor"><span class="ti">💖</span>Amor</button>
+        <button type="button" data-val="dinero"><span class="ti">💰</span>Dinero</button>
+        <button type="button" data-val="trabajo"><span class="ti">💼</span>Trabajo</button>
+        <button type="button" data-val="familia"><span class="ti">👨‍👩‍👧</span>Familia</button>
+        <button type="button" data-val="salud"><span class="ti">🌿</span>Salud</button>
+      </div>
+    </div>
+    <div class="fila" style="gap:12px; margin-top:14px; width:100%; max-width:440px; margin-left:auto; margin-right:auto">
+      <button class="btn fantasma" id="btn-tema-volver" style="width:auto; padding:16px 22px">←</button>
+      <button class="btn oro" id="btn-revelar">Revelar mi lectura ✨</button>
+    </div>
   </section>
 
   <!-- ============ ANÁLISIS ============ -->
@@ -833,7 +849,7 @@ const estado = {
 const $ = (s) => document.querySelector(s);
 const pantallas = {
   intro:$('#pantalla-intro'), home:$('#pantalla-home'), form:$('#pantalla-form'), camara:$('#pantalla-camara'),
-  analisis:$('#pantalla-analisis'), resultado:$('#pantalla-resultado')
+  tema:$('#pantalla-tema'), analisis:$('#pantalla-analisis'), resultado:$('#pantalla-resultado')
 };
 function mostrar(id){
   Object.values(pantallas).forEach(p => p.classList.remove('activo'));
@@ -942,9 +958,7 @@ $('#btn-a-camara').addEventListener('click', () => {
   estado.fecha  = $('#in-fecha').value;
   estado.anio   = estado.fecha ? estado.fecha.split('-')[0] : '';
   estado.signo  = calcularSigno(estado.fecha);
-  // estado.tema ya se fija al tocar la botonera de enfoque (vacío = lectura general).
-  const temaSel = $('#seg-tema .sel');
-  estado.tema = temaSel ? (temaSel.dataset.val || '') : '';
+  // El tema (enfoque) se elige DESPUÉS de la foto, en la pantalla de enfoque.
   estado.flipManual = false;
 
   // Guarda los datos del formulario (lead) en la base de datos.
@@ -1031,8 +1045,18 @@ function guardarImagen(fuente, w, h, espejo){
     im.src = estado.dataUrl;
   }
   detenerCamara();
-  iniciarLectura();
+  // Tras la foto, el usuario elige el ENFOQUE de su lectura (amor, dinero, ...).
+  mostrar('tema');
 }
+
+// Botón de la pantalla de enfoque: fija el tema elegido y lanza la lectura.
+$('#btn-revelar').addEventListener('click', () => {
+  const sel = $('#seg-tema .sel');
+  estado.tema = sel ? (sel.dataset.val || '') : '';
+  iniciarLectura();
+});
+// Volver a tomar la foto desde la pantalla de enfoque.
+$('#btn-tema-volver').addEventListener('click', () => { mostrar('camara'); iniciarCamara(); });
 
 /* ====================== ANÁLISIS + LECTURA INICIAL ====================== */
 const mensajesEstado = [
