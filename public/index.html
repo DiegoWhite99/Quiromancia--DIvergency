@@ -1554,21 +1554,50 @@ function abrirRecibir(){ $('#recibir-estado').textContent=''; $('#modal-recibir'
 $('#btn-recibir').addEventListener('click', abrirRecibir);
 $('#btn-recibir2').addEventListener('click', abrirRecibir);
 $('#btn-recibir-cerrar').addEventListener('click', () => $('#modal-recibir').classList.remove('activo'));
-// Normaliza el celular a formato internacional para wa.me (Colombia: 10 dígitos → +57).
+// Normaliza el celular a formato internacional, sin '+' (Colombia: 10 dígitos que empiezan en 3 → 57…).
 function telWhatsApp(cel){
-  let d = (cel || '').replace(/\D/g, '');
-  if(!d) return '';
-  if(d.length === 10) d = '57' + d;   // celular colombiano sin indicativo
+  const d = (cel || '').replace(/\D/g, '');
+  if(d.startsWith('3') && d.length === 10) return '57' + d;  // celular colombiano sin indicativo
   return d;
 }
-$('#btn-whatsapp').addEventListener('click', () => {
+
+// Envía la lectura al WhatsApp del usuario vía el webhook de n8n (emisor: +57 323 3239999, DivergencyAI).
+const WHATSAPP_ENDPOINT = 'https://n8n.divergencyai.cloud/webhook/quiromancia-lectura';
+$('#btn-whatsapp').addEventListener('click', async () => {
+  const btn = $('#btn-whatsapp');
   const est = $('#recibir-estado');
+  if(btn.dataset.enviado === '1' || btn.dataset.enviando === '1') return;  // evita doble envío
+
   const tel = telWhatsApp(estado.cel);
+  if(!tel){ est.textContent = '⚠️ No encontramos tu número. Vuelve al formulario y escríbelo.'; return; }
+
   const intro = '🔮 *Quiromancia AI · Divergency*\nTu lectura completa, ' + (estado.nombre || '') + ':\n\n';
-  const texto = intro + compilarPrediccion();
-  const url = (tel ? 'https://wa.me/' + tel : 'https://wa.me/') + '?text=' + encodeURIComponent(texto);
-  window.open(url, '_blank');
-  est.textContent = tel ? '✨ Abriendo WhatsApp para enviarte tu lectura completa…' : '✨ Abriendo WhatsApp…';
+  const lectura = intro + compilarPrediccion();
+
+  btn.dataset.enviando = '1';
+  const htmlOriginal = btn.innerHTML;
+  btn.disabled = true; btn.innerHTML = 'Enviando…';
+  est.textContent = '✨ Enviando tu lectura por WhatsApp…';
+
+  try{
+    const r = await fetch(WHATSAPP_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ celular: tel, lectura })
+    });
+    const data = await r.json().catch(() => ({}));
+    if(r.ok && data.success){
+      btn.dataset.enviado = '1';
+      btn.innerHTML = '✅ Enviada a tu WhatsApp';
+      est.textContent = '✅ Tu lectura fue enviada a tu WhatsApp 🔮';
+    } else {
+      est.textContent = 'No pudimos enviar tu lectura. Intenta de nuevo.';
+      btn.disabled = false; btn.innerHTML = htmlOriginal; btn.dataset.enviando = '0';
+    }
+  } catch(e){
+    est.textContent = 'Problema de conexión. Verifica tu internet e intenta de nuevo.';
+    btn.disabled = false; btn.innerHTML = htmlOriginal; btn.dataset.enviando = '0';
+  }
 });
 
 /* ---------- Voz del oráculo: ElevenLabs (voz mística) con respaldo del navegador ---------- */
