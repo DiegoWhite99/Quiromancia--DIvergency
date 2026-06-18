@@ -401,6 +401,15 @@
   .res-consejos li{ position:relative; padding:10px 14px 10px 34px; font-size:14.5px; line-height:1.55; color:#eee9ff;
     background:rgba(235,200,120,.07); border:1px solid rgba(235,200,120,.28); border-radius:12px; }
   .res-consejos li::before{ content:"✦"; position:absolute; left:13px; top:10px; color:var(--oro); font-size:13px; }
+  /* Tarjeta dedicada de consejos: destacada con acento dorado. */
+  .res-consejos-card{ padding:16px 18px; border:1px solid rgba(235,200,120,.5);
+    background:linear-gradient(180deg, rgba(235,200,120,.10), rgba(20,16,40,.55));
+    box-shadow:0 22px 55px -36px #000, 0 0 26px -10px rgba(235,200,120,.45); }
+  .res-consejos-card .lc-tit{ font-family:var(--display); font-weight:700; font-size:17px; color:var(--oro-suave);
+    margin-bottom:10px; display:flex; align-items:center; gap:8px; }
+  .res-consejos-card .cons-ico{ font-size:19px; }
+  .res-consejos-card .cons-tema{ font-size:12.5px; font-weight:600; letter-spacing:.02em; color:var(--oro);
+    text-transform:capitalize; opacity:.85; }
 
   /* Botón de WhatsApp */
   .btn-wa{ display:flex; align-items:center; justify-content:center; gap:11px; width:100%;
@@ -720,6 +729,9 @@
       </div>
       <p class="res-pista" id="res-pista">✦ Toca una caja del croquis para resaltar su línea.</p>
       <div class="glass res-extra" id="res-extra" hidden></div>
+      <!-- Tarjeta dedicada con los consejos del oráculo. -->
+      <div class="glass res-consejos-card" id="res-consejos" hidden></div>
+      <p class="res-cierre" id="res-cierre" hidden></p>
     </div>
 
     <div class="res-actions">
@@ -1184,12 +1196,22 @@ function lineasDeLectura(a){
     lectura: tx(l.lectura) || b.lectura
   }; });
 }
-// Consejos finales del oráculo (acepta arreglo o un solo texto).
+// Consejos de respaldo por tema (si el oráculo no devuelve ninguno, la tarjeta NUNCA queda vacía).
+const CONSEJOS_BASE = {
+  amor:    ['Escucha de verdad y di lo que sientes.', 'No fuerces el amor: lo sincero llega a su tiempo.', 'Cuida los pequeños detalles del día a día.'],
+  dinero:  ['Ojo con lo que gastas: aparta un ahorro cada mes.', 'Antes de arriesgar, asegura lo básico.', 'Invierte en lo que de verdad conoces.'],
+  trabajo: ['Apuesta por aquello que se te da bien.', 'La constancia abre más puertas que la prisa.', 'Rodéate de quien te impulse a crecer.'],
+  familia: ['Dedica tiempo de calidad a los tuyos.', 'Perdona y comunica: los lazos se cuidan.', 'Tus raíces son tu mayor fortaleza.'],
+  salud:   ['Escucha a tu cuerpo y descansa lo suficiente.', 'Pequeños hábitos diarios lo cambian todo.', 'Cuida tu mente tanto como tu cuerpo.'],
+  '':      ['Confía en tu proceso y sé constante.', 'Escucha tu intuición, pero actúa con cabeza.', 'Lo mejor de tu mano aún está por escribirse.']
+};
+// Consejos finales del oráculo (acepta arreglo o un solo texto; si no hay, usa el respaldo del tema).
 function consejosDe(a){
   const c = a && a.consejos;
-  if(Array.isArray(c)) return c.map(x => String(x||'').trim()).filter(Boolean);
-  if(typeof c === 'string' && c.trim()) return [c.trim()];
-  return [];
+  let arr = [];
+  if(Array.isArray(c)) arr = c.map(x => String(x||'').trim()).filter(Boolean);
+  else if(typeof c === 'string' && c.trim()) arr = [c.trim()];
+  return arr.length ? arr : (CONSEJOS_BASE[estado.tema || ''] || CONSEJOS_BASE['']);
 }
 
 function renderResultado(){
@@ -1200,13 +1222,14 @@ function renderResultado(){
   const chipL = $('#chip-lectura'); chipL.textContent = 'Lectura ' + n + '/3'; chipL.className = 'chip lectura';
   $('#btn-tts').classList.toggle('on', estado.tts);
 
-  const saludoEl = $('#res-saludo'), cardsEl = $('#res-cards'), extraEl = $('#res-extra'), pista = $('#res-pista');
+  const saludoEl = $('#res-saludo'), cardsEl = $('#res-cards'), extraEl = $('#res-extra'),
+        consejosEl = $('#res-consejos'), cierreEl = $('#res-cierre'), pista = $('#res-pista');
   if(a.error){
     saludoEl.textContent = '';
     pista.style.display = 'none';
     cardsEl.innerHTML = '<div class="glass linea-card err-card"><div class="lc-tit">Las brumas no se despejaron</div>'
       + '<div class="lc-txt">' + esc(a.error) + ' · Toca ↺ para intentar de nuevo.</div></div>';
-    extraEl.hidden = true;
+    extraEl.hidden = true; consejosEl.hidden = true; cierreEl.hidden = true;
   } else {
     const lineas = lineasDeLectura(a);
     saludoEl.textContent = a.saludo || ('Las líneas de tu palma están listas para hablar, ' + (estado.nombre || 'viajero') + '.');
@@ -1222,15 +1245,22 @@ function renderResultado(){
         + (l.observacion ? '<div class="lc-obs">'+esc(l.observacion)+'</div>' : '')
         + '<div class="lc-txt">'+esc(l.lectura||'')+'</div></div>';
     }).join('');
-    let extra = '';
-    if(a.montes) extra += '<div class="lc-tit" style="color:var(--oro-suave)">✋ Montes y forma de la mano</div><div class="lc-txt">'+esc(a.montes)+'</div>';
+    // Montes y forma de la mano (su propio bloque).
+    extraEl.innerHTML = a.montes
+      ? '<div class="lc-tit" style="color:var(--oro-suave)">✋ Montes y forma de la mano</div><div class="lc-txt">'+esc(a.montes)+'</div>'
+      : '';
+    extraEl.hidden = !a.montes;
+    // Tarjeta dedicada de CONSEJOS (lo que pidió el usuario).
     const consejos = consejosDe(a);
     if(consejos.length){
-      extra += '<div class="lc-tit" style="color:var(--oro-suave); margin-top:14px">✨ Consejos del oráculo</div>'
+      consejosEl.innerHTML = '<div class="lc-tit"><span class="cons-ico">✨</span> Consejos del oráculo'
+        + (estado.tema ? ' <span class="cons-tema">· '+esc(estado.tema)+'</span>' : '') + '</div>'
         + '<ul class="res-consejos">' + consejos.map(c => '<li>'+esc(c)+'</li>').join('') + '</ul>';
-    }
-    if(a.cierre) extra += '<p class="res-cierre" style="margin-top:10px">'+esc(a.cierre)+'</p>';
-    extraEl.innerHTML = extra; extraEl.hidden = !extra;
+      consejosEl.hidden = false;
+    } else { consejosEl.hidden = true; }
+    // Cierre inspirador al final.
+    cierreEl.textContent = a.cierre || '';
+    cierreEl.hidden = !a.cierre;
   }
   // Dibuja el diagrama de la mano (croquis + líneas de color + cajitas).
   // Usa las líneas reales si las hay; si no, las de respaldo (las cajas SIEMPRE salen).
