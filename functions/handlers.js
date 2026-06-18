@@ -21,11 +21,14 @@ function guiaTratado() {
     try { if (fs.existsSync(p)) { txt = fs.readFileSync(p, 'utf8'); break; } } catch (e) {}
   }
   if (txt) {
-    let i = txt.indexOf('LOS MONTES');
+    // Nos quedamos con lo MÁS útil para una lectura (las líneas) y recortamos fuerte
+    // para que el prompt no pese demasiado: peticiones más rápidas y fiables.
+    let i = txt.indexOf('LAS LÍNEAS');
+    if (i < 0) i = txt.indexOf('LOS MONTES');
     if (i < 0) i = txt.indexOf('LOS DEDOS');
     if (i > 0) txt = txt.slice(i);
     txt = txt.replace(/\r/g, '').replace(/\n{3,}/g, '\n\n').trim();
-    const MAX = 50000;   // ~12k tokens; con la caché de prompt apenas pesa en repeticiones
+    const MAX = 16000;   // ~4k tokens (antes ~12k): mucho más ligero
     if (txt.length > MAX) txt = txt.slice(0, MAX);
   }
   _guiaCache = txt;
@@ -194,50 +197,54 @@ async function handleLectura(body) {
     + enfoque
     + ` Analiza con detalle ESTA fotografía de la palma siguiendo el protocolo de observación: mide la forma de la mano y los dedos, sigue el recorrido REAL de cada línea y devuelve sus "puntos" sobre la foto. Haz una lectura ÚNICA y PERSONAL —usa su nombre y su etapa de vida— basada en lo que de verdad ves aquí (otra persona debe recibir una lectura distinta). Responde en formato JSON.`;
 
-  const r = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', authorization: `Bearer ${apiKey()}` },
-    body: JSON.stringify({
-      model: MODELO,
-      max_tokens: 2600,
-      temperature: cfg.temperatura,
-      // Penaliza repetir las mismas palabras → menos frases hechas y más variedad real.
-      frequency_penalty: 0.4,
-      presence_penalty: 0.3,
-      response_format: { type: 'json_object' },
-      messages: [
-        { role: 'system', content: construirSystemLectura(modo) },
-        { role: 'user', content: [
-          { type: 'text', text: intro },
-          // detail:'high' → OpenAI analiza la palma en alta resolución (ve líneas finas)
-          // en vez de reducirla a una miniatura borrosa y dar una lectura genérica.
-          { type: 'image_url', image_url: { url: body.dataUrl, detail: 'high' } }
-        ] }
-      ]
-    })
-  });
-  if (!r.ok) { const t = await r.text(); return { status: r.status, data: { error: 'OpenAI: ' + t.slice(0, 300) } }; }
+  const cuerpo = {
+    model: MODELO,
+    max_tokens: 2600,
+    temperature: cfg.temperatura,
+    // Penaliza repetir las mismas palabras → menos frases hechas y más variedad real.
+    frequency_penalty: 0.4,
+    presence_penalty: 0.3,
+    response_format: { type: 'json_object' },
+    messages: [
+      { role: 'system', content: construirSystemLectura(modo) },
+      { role: 'user', content: [
+        { type: 'text', text: intro },
+        // detail:'high' → OpenAI analiza la palma en alta resolución (ve líneas finas).
+        { type: 'image_url', image_url: { url: body.dataUrl, detail: 'high' } }
+      ] }
+    ]
+  };
 
-  const data = await r.json();
-  let txt = (data.choices?.[0]?.message?.content || '').trim();
-  txt = txt.replace(/^```(json)?/i, '').replace(/```$/, '').trim();
-
-  // Parseo tolerante: si el JSON viene completo, perfecto; si vino cortado
-  // (p.ej. por longitud), intentamos recuperar el bloque.
+  // Hasta 3 intentos: si la API falla (lentitud, límite, error transitorio) o la
+  // respuesta viene vacía, reintentamos. NUNCA bloqueamos: tras los intentos
+  // devolvemos lo que tengamos (aunque sea vacío) y el front rellena las 4 líneas
+  // y SIEMPRE muestra una lectura. El aviso de "repetir foto" queda solo para que
+  // el navegador no pueda llegar al servidor (error de red real).
   let lectura = null;
-  try { lectura = JSON.parse(txt); }
-  catch (e) {
-    const mm = txt.match(/\{[\s\S]*\}/);
-    if (mm) { try { lectura = JSON.parse(mm[0]); } catch (_) { lectura = null; } }
+  for (let intento = 1; intento <= 3 && !lectura; intento++) {
+    try {
+      const r = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${apiKey()}` },
+        body: JSON.stringify(cuerpo)
+      });
+      if (!r.ok) continue;   // error de la API → reintenta
+      const data = await r.json();
+      let txt = (data.choices?.[0]?.message?.content || '').trim();
+      txt = txt.replace(/^```(json)?/i, '').replace(/```$/, '').trim();
+      let parsed = null;
+      try { parsed = JSON.parse(txt); }
+      catch (e) { const mm = txt.match(/\{[\s\S]*\}/); if (mm) { try { parsed = JSON.parse(mm[0]); } catch (_) {} } }
+      if (parsed && Array.isArray(parsed.lineas) && parsed.lineas.length) { lectura = parsed; break; }
+      if (parsed && typeof parsed === 'object') lectura = lectura || parsed; // guarda algo por si todos fallan
+    } catch (e) { /* error de red hacia OpenAI → reintenta */ }
   }
-  // Tolerancia MÁXIMA: NUNCA bloqueamos por la foto. Si no pudimos interpretar el
-  // JSON, devolvemos un objeto vacío SIN error; el front rellena las 4 líneas con su
-  // respaldo y SIEMPRE muestra una lectura. El aviso de "repetir foto" queda solo
-  // para fallos técnicos reales (error de red/API, que se manejan más arriba).
-  if (!lectura || typeof lectura !== 'object') {
-    return { status: 200, data: { lectura: {} } };
+  // Para depurar si la API está caída (clave/saldo): queda en los logs, no se muestra.
+  if (!lectura || !Array.isArray(lectura.lineas) || !lectura.lineas.length) {
+    try { console.warn('handleLectura: sin líneas tras 3 intentos (¿API/saldo de OpenAI?).'); } catch (e) {}
   }
-  return { status: 200, data: { lectura } };
+  // Siempre 200 con una lectura (real, parcial o vacía → el front la completa).
+  return { status: 200, data: { lectura: lectura || {} } };
 }
 
 async function handleTranscribe(body) {
