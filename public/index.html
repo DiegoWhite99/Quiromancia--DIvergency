@@ -330,13 +330,14 @@
   .res-mapa{ position:relative; grid-area:mapa; width:100%; max-width:560px; aspect-ratio:1/1; margin:0 auto; align-self:center; flex-shrink:0; border-radius:20px; overflow:hidden;
     background:radial-gradient(circle at 50% 42%, #0c1b46, #06102e 70%); border:1px solid rgba(91,160,255,.25);
     box-shadow:0 22px 55px -32px #000, 0 0 34px -8px rgba(91,200,255,.35); }
-  /* Diagrama anotado: en móvil se apila; en pantalla ancha la mano queda al centro
-     y las tarjetas se reparten en sus esquinas (Vida/Cabeza a la izq., Corazón/Destino a la der.). */
+  /* Diagrama anotado. Por defecto (móvil y tablet) SE APILA en una sola columna:
+     mano arriba y las 4 tarjetas debajo. Solo en pantallas anchas de verdad (≥1024px,
+     escritorio) las tarjetas flanquean la mano (Vida/Cabeza izq., Corazón/Destino der.). */
   .res-diagrama{ display:grid; gap:13px; align-items:start;
     grid-template-columns:1fr; grid-template-areas:"mapa" "vida" "corazon" "cabeza" "destino"; }
-  @media (min-width:880px){
-    .res-diagrama{ align-items:stretch; gap:16px;
-      grid-template-columns:minmax(210px,1fr) minmax(320px,1.5fr) minmax(210px,1fr);
+  @media (min-width:1024px){
+    .res-diagrama{ align-items:stretch; gap:18px;
+      grid-template-columns:minmax(240px,1fr) minmax(380px,1.3fr) minmax(240px,1fr);
       grid-template-areas:"vida mapa corazon" "cabeza mapa destino"; }
   }
   #res-canvas{ display:block; width:100%; height:100%; cursor:pointer; }
