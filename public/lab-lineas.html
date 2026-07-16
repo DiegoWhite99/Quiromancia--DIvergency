@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Lab · Detección real de líneas de la palma · Divergency</title>
+<!--
+  ============================================================================
+  LABORATORIO (experimento aislado) · Divergency · Quiromancia AI
+  ============================================================================
+  OBJETIVO: probar si podemos DETECTAR de verdad los surcos de la palma
+  (vida / corazón / cabeza / destino) en el navegador, sin coste de servidor,
+  usando MediaPipe (recorte de la palma) + OpenCV.js (detección de líneas).
+
+  Esto NO toca index.html. Ábrelo con el dev-server en:
+      http://localhost:3000/lab-lineas.html
+  o simplemente abre el archivo en el navegador (necesita internet: carga
+  OpenCV.js y MediaPipe desde CDN).
+
+  CÓMO SE USA:
+    1) Sube una foto de una palma (o usa la cámara).
+    2) Mira las vistas intermedias (máscara, gris realzado, bordes, resultado).
+    3) Mueve los sliders hasta que las líneas caigan sobre los surcos reales.
+    4) Cuando quede fino, portamos ESTOS parámetros a la app.
+
+  HONESTO: los umbrales de visión por computador SIEMPRE se calibran a ojo con
+  fotos reales. Esta es una primera versión funcional para tunear; la
+  clasificación en las 4 líneas es heurística (por zona de la palma).
+  ============================================================================
+-->
+<style>
+  :root{
+    --bg:#0b0b2e; --panel:#15154a; --ink:#EDECFF; --muted:#A9A8D8; --gold:#EBC878;
+    --verde:#43d9a3; --rosa:#ff77aa; --azul:#5db4ff; --dorado:#EBC878;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Inter,system-ui,Arial,sans-serif;background:var(--bg);color:var(--ink);padding:18px}
+  h1{font-size:18px;margin:0 0 4px}
+  p.sub{color:var(--muted);margin:0 0 16px;font-size:13px;line-height:1.5}
+  .row{display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start}
+  .panel{background:var(--panel);border:1px solid #ffffff18;border-radius:14px;padding:14px}
+  .controls{min-width:280px;flex:0 0 300px}
+  .stages{flex:1 1 520px;min-width:320px}
+  label.ctl{display:block;margin:10px 0;font-size:13px;color:var(--muted)}
+  label.ctl b{color:var(--ink);float:right;font-variant-numeric:tabular-nums}
+  input[type=range]{width:100%;accent-color:var(--gold)}
+  .btns{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+  button{background:var(--gold);color:#1a1500;border:0;border-radius:10px;padding:9px 14px;font-weight:600;cursor:pointer;font-size:13px}
+  button.ghost{background:transparent;color:var(--ink);border:1px solid #ffffff33}
+  input[type=file]{color:var(--muted);font-size:12px}
+  .canvases{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+  .cv{background:#00000040;border:1px solid #ffffff14;border-radius:10px;padding:8px}
+  .cv h3{margin:0 0 6px;font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.08em}
+  canvas,video{max-width:100%;border-radius:6px;display:block;background:#000}
+  #resultWrap{grid-column:1/-1}
+  #result{width:100%}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;margin-top:8px}
+  .legend span{display:flex;align-items:center;gap:6px;color:var(--muted)}
+  .dot{width:12px;height:12px;border-radius:50%;display:inline-block}
+  .status{font-size:12px;color:var(--muted);margin:8px 0;min-height:18px}
+  .status.err{color:#ff8080}
+  .status.ok{color:var(--verde)}
+  #cam{display:none;margin-top:8px}
+  pre.report{background:#00000050;border-radius:8px;padding:10px;font-size:11px;color:var(--muted);white-space:pre-wrap;max-height:220px;overflow:auto;margin-top:8px}
+  details{margin-top:10px;font-size:12px;color:var(--muted)}
+  summary{cursor:pointer;color:var(--ink)}
+</style>
+</head>
+<body>
+  <h1>🔬 Lab · Detección real de líneas de la palma</h1>
+  <p class="sub">
+    MediaPipe recorta la palma → OpenCV.js realza y detecta los surcos → se clasifican por zona
+    (vida/corazón/cabeza/destino). Ajusta los sliders hasta que las líneas caigan sobre los surcos reales.
+    <br><b>Experimento aislado</b> — no afecta a la app. Necesita internet (OpenCV.js + MediaPipe por CDN).
+  </p>
+
+  <div class="row">
+    <!-- ------------------------- CONTROLES ------------------------- -->
+    <div class="panel controls">
+      <div class="btns">
+        <label class="ghost" style="padding:9px 14px;border:1px solid #ffffff33;border-radius:10px;cursor:pointer">
+          📁 Subir foto <input id="file" type="file" accept="image/*" style="display:none">
+        </label>
+        <button id="btnCam" class="ghost">📷 Cámara</button>
+        <button id="btnShot" class="ghost" style="display:none">📸 Capturar</button>
+      </div>
+      <video id="cam" playsinline></video>
+
+      <button id="btnRun" style="width:100%;margin:8px 0">▶ Procesar</button>
+      <div id="status" class="status">Cargando OpenCV.js y MediaPipe…</div>
+
+      <label class="ctl">Ancho de trabajo (px) <b id="vScale">640</b>
+        <input id="sScale" type="range" min="360" max="1000" step="20" value="640"></label>
+      <label class="ctl">Contraste local CLAHE <b id="vClahe">3.0</b>
+        <input id="sClahe" type="range" min="1" max="8" step="0.5" value="3"></label>
+      <label class="ctl">Realce de surco (blackhat) <b id="vBh">17</b>
+        <input id="sBh" type="range" min="5" max="41" step="2" value="17"></label>
+      <label class="ctl">Umbral · tamaño de bloque <b id="vBlock">25</b>
+        <input id="sBlock" type="range" min="9" max="61" step="2" value="25"></label>
+      <label class="ctl">Umbral · sensibilidad (C) <b id="vC">7</b>
+        <input id="sC" type="range" min="1" max="20" step="1" value="7"></label>
+      <label class="ctl">Conectar trazos (morph) <b id="vConn">2</b>
+        <input id="sConn" type="range" min="0" max="5" step="1" value="2"></label>
+      <label class="ctl">Longitud mínima de línea (% palma) <b id="vMin">28</b>
+        <input id="sMin" type="range" min="8" max="60" step="2" value="28"></label>
+
+      <details>
+        <summary>¿Qué hace cada paso?</summary>
+        <p><b>CLAHE</b>: sube el contraste local para que el surco resalte.
+        <b>Blackhat</b>: aísla las líneas oscuras finas sobre piel clara.
+        <b>Umbral adaptativo</b>: convierte a blanco/negro según cada zona.
+        <b>Morph</b>: une trocitos de un mismo surco.
+        <b>Longitud mínima</b>: descarta arruguitas cortas.</p>
+      </details>
+      <pre id="report" class="report">—</pre>
+    </div>
+
+    <!-- ------------------------- VISTAS ------------------------- -->
+    <div class="panel stages">
+      <div class="canvases">
+        <div class="cv" id="resultWrap">
+          <h3>Resultado (líneas detectadas)</h3>
+          <canvas id="result"></canvas>
+          <div class="legend">
+            <span><i class="dot" style="background:var(--verde)"></i>Vida</span>
+            <span><i class="dot" style="background:var(--rosa)"></i>Corazón</span>
+            <span><i class="dot" style="background:var(--azul)"></i>Cabeza</span>
+            <span><i class="dot" style="background:var(--dorado)"></i>Destino</span>
+            <span><i class="dot" style="background:#888"></i>Otros surcos</span>
+          </div>
+        </div>
+        <div class="cv"><h3>1 · Palma recortada</h3><canvas id="cMask"></canvas></div>
+        <div class="cv"><h3>2 · Gris realzado</h3><canvas id="cGray"></canvas></div>
+        <div class="cv"><h3>3 · Surcos (binario)</h3><canvas id="cBin"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MediaPipe Hand Landmarker (el mismo que ya usa la app) -->
+  <script type="module">
+    import { HandLandmarker, FilesetResolver } from 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs';
+    let _lm = null, _loading = null;
+    async function init(){
+      if(_lm) return _lm;
+      if(_loading) return _loading;
+      _loading = (async () => {
+        const fileset = await FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm');
+        _lm = await HandLandmarker.createFromOptions(fileset, {
+          baseOptions: { modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task' },
+          numHands: 1, runningMode: 'IMAGE'
+        });
+        return _lm;
+      })();
+      return _loading;
+    }
+    window.__detectarMano = async function(imgEl){
+      try{ const lm = await init(); const r = lm.detect(imgEl);
+        if(r && r.landmarks && r.landmarks.length) return r.landmarks[0]; }
+      catch(e){ console.warn('MediaPipe:', e); }
+      return null;
+    };
+    window.__mpListo = () => init().then(()=>true).catch(()=>false);
+  </script>
+
+  <!-- OpenCV.js (WASM, ~8 MB) -->
+  <script async src="https://docs.opencv.org/4.10.0/opencv.js"></script>
+
+  <script>
+  /* ==========================================================================
+     Lógica del laboratorio (JS plano). Todo cliente, sin backend.
+     ========================================================================== */
+  const $ = s => document.querySelector(s);
+  const statusEl = $('#status');
+  function setStatus(msg, cls){ statusEl.textContent = msg; statusEl.className = 'status' + (cls?(' '+cls):''); }
+
+  // --- Espera a que OpenCV.js esté listo (patrón robusto por sondeo) ---
+  let cvReady = false;
+  (function waitCv(){
+    if (window.cv && cv.Mat) { cvReady = true; readyCheck(); }
+    else setTimeout(waitCv, 60);
+  })();
+  let mpReady = false;
+  window.addEventListener('load', async () => { mpReady = await window.__mpListo(); readyCheck(); });
+  function readyCheck(){
+    if (cvReady && mpReady) setStatus('Listo ✓ — sube una foto de una palma y pulsa Procesar.', 'ok');
+    else if (cvReady) setStatus('OpenCV listo ✓ · cargando MediaPipe…');
+    else setStatus('Cargando OpenCV.js…');
+  }
+
+  // --- Sliders → etiquetas en vivo ---
+  const binds = [['sScale','vScale'],['sClahe','vClahe'],['sBh','vBh'],['sBlock','vBlock'],['sC','vC'],['sConn','vConn'],['sMin','vMin']];
+  binds.forEach(([s,v]) => { const el=$('#'+s), lb=$('#'+v); const upd=()=>lb.textContent=el.value; el.addEventListener('input',()=>{upd(); if(window.__img) run();}); upd(); });
+
+  // --- Carga de imagen (archivo) ---
+  $('#file').addEventListener('change', e => {
+    const f = e.target.files[0]; if(!f) return;
+    const img = new Image();
+    img.onload = () => { window.__img = img; setStatus('Foto cargada. Procesando…'); run(); };
+    img.src = URL.createObjectURL(f);
+  });
+
+  // --- Cámara ---
+  let stream = null;
+  $('#btnCam').addEventListener('click', async () => {
+    try{
+      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      const v = $('#cam'); v.srcObject = stream; v.style.display='block'; await v.play();
+      $('#btnShot').style.display='inline-block';
+      setStatus('Encuadra la palma y pulsa Capturar.');
+    }catch(err){ setStatus('No se pudo abrir la cámara: '+err.message, 'err'); }
+  });
+  $('#btnShot').addEventListener('click', () => {
+    const v = $('#cam'); const c = document.createElement('canvas');
+    c.width = v.videoWidth; c.height = v.videoHeight;
+    c.getContext('2d').drawImage(v,0,0);
+    const img = new Image();
+    img.onload = () => { window.__img = img; run(); };
+    img.src = c.toDataURL('image/jpeg', 0.92);
+    if(stream){ stream.getTracks().forEach(t=>t.stop()); }
+    v.style.display='none'; $('#btnShot').style.display='none';
+  });
+
+  $('#btnRun').addEventListener('click', () => { if(window.__img) run(); else setStatus('Primero sube una foto o captura con la cámara.', 'err'); });
+
+  /* --------------------------------------------------------------------------
+     PIPELINE PRINCIPAL
+     -------------------------------------------------------------------------- */
+  let running = false;
+  async function run(){
+    if(!cvReady){ setStatus('OpenCV.js aún no cargó…', 'err'); return; }
+    if(running) return; running = true;
+    const trash = [];               // Mats a liberar (evita fugas de memoria WASM)
+    const T = m => { trash.push(m); return m; };
+    try{
+      const img = window.__img;
+      const W = parseInt($('#sScale').value, 10);
+      const H = Math.round(img.height * (W / img.width));
+
+      // 0) Imagen a tamaño de trabajo, en un canvas.
+      const work = document.createElement('canvas'); work.width=W; work.height=H;
+      work.getContext('2d').drawImage(img, 0, 0, W, H);
+
+      // 1) MediaPipe: 21 puntos de la mano (para recortar la palma y clasificar zonas).
+      setStatus('Detectando la mano…');
+      const lms = await window.__detectarMano(work);   // null si no la encuentra
+
+      // 2) OpenCV: leer imagen de trabajo.
+      const src = T(cv.imread(work));                  // RGBA
+      const gray = T(new cv.Mat()); cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+
+      // 3) Máscara de la palma (polígono a partir de landmarks). Sin mano → todo el frame.
+      const mask = T(cv.Mat.zeros(H, W, cv.CV_8UC1));
+      let palm = null;
+      if(lms){
+        palm = palmFrame(lms, W, H);
+        const poly = palmPolygon(lms, W, H);
+        const pts = cv.matFromArray(poly.length, 1, cv.CV_32SC2, poly.flat());
+        const vec = new cv.MatVector(); vec.push_back(pts);
+        cv.fillPoly(mask, vec, new cv.Scalar(255));
+        pts.delete(); vec.delete();
+        // dilata un poco para no cortar surcos del borde
+        const k = T(cv.getStructuringElement(cv.MORPH_ELLIPSE, new cv.Size(9,9)));
+        cv.dilate(mask, mask, k);
+      } else {
+        mask.setTo(new cv.Scalar(255));
+        setStatus('No detecté la mano (uso todo el encuadre). Prueba una foto más frontal y con luz pareja.', 'err');
+      }
+
+      // 4) Realce del gris: CLAHE (contraste local). Fallback a equalizeHist si el
+      //    build de OpenCV.js no expone CLAHE.
+      const clip = parseFloat($('#sClahe').value);
+      const eq = T(new cv.Mat());
+      try{
+        const clahe = new cv.CLAHE(clip, new cv.Size(8,8));
+        clahe.apply(gray, eq); clahe.delete();
+      }catch(e){ console.warn('CLAHE no disponible, uso equalizeHist:', e); cv.equalizeHist(gray, eq); }
+      cv.GaussianBlur(eq, eq, new cv.Size(3,3), 0);
+
+      // 5) Blackhat: aísla surcos oscuros finos.
+      let bh = parseInt($('#sBh').value,10); if(bh%2===0) bh++;
+      const kBh = T(cv.getStructuringElement(cv.MORPH_ELLIPSE, new cv.Size(bh,bh)));
+      const black = T(new cv.Mat()); cv.morphologyEx(eq, black, cv.MORPH_BLACKHAT, kBh);
+      cv.normalize(black, black, 0, 255, cv.NORM_MINMAX);
+
+      // 6) Umbral adaptativo → binario de surcos.
+      let block = parseInt($('#sBlock').value,10); if(block%2===0) block++;
+      const C = parseInt($('#sC').value,10);
+      const bin = T(new cv.Mat());
+      cv.adaptiveThreshold(black, bin, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, block, -C);
+      // limpia fuera de la palma
+      cv.bitwise_and(bin, mask, bin);
+      // quita motas + conecta trocitos
+      const kOpen = T(cv.getStructuringElement(cv.MORPH_ELLIPSE, new cv.Size(3,3)));
+      cv.morphologyEx(bin, bin, cv.MORPH_OPEN, kOpen);
+      const conn = parseInt($('#sConn').value,10);
+      if(conn>0){ const kC = T(cv.getStructuringElement(cv.MORPH_ELLIPSE, new cv.Size(3,3)));
+        cv.morphologyEx(bin, bin, cv.MORPH_CLOSE, kC, new cv.Point(-1,-1), conn); }
+
+      // 7) Contornos → polilíneas candidatas, filtradas por longitud.
+      const palmLen = palm ? palm.len : Math.hypot(W,H)*0.5;
+      const minLen = palmLen * (parseInt($('#sMin').value,10)/100);
+      const contours = new cv.MatVector(); const hier = T(new cv.Mat());
+      cv.findContours(bin, contours, hier, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE);
+      const polylines = [];
+      for(let i=0;i<contours.size();i++){
+        const c = contours.get(i);
+        const len = cv.arcLength(c, false);
+        if(len >= minLen){
+          const approx = new cv.Mat();
+          cv.approxPolyDP(c, approx, 2.5, false);
+          const pts = [];
+          for(let j=0;j<approx.rows;j++) pts.push([approx.data32S[j*2], approx.data32S[j*2+1]]);
+          if(pts.length>=2) polylines.push({ pts, len });
+          approx.delete();
+        }
+        c.delete();
+      }
+      contours.delete();
+
+      // 8) Clasifica cada polilínea en vida/corazón/cabeza/destino (heurística por zona).
+      const clasificadas = palm ? clasificar(polylines, palm) : {};
+
+      // 9) Pinta resultados.
+      pintarStage('#cMask', maskedPreview(src, mask, T));
+      pintarStage('#cGray', black);         // gris realzado (blackhat)
+      pintarStage('#cBin', bin);            // binario de surcos
+      dibujarResultado(work, polylines, clasificadas);
+
+      // 10) Reporte.
+      reporte(polylines, clasificadas, lms, minLen, palmLen);
+      setStatus(lms ? `Listo ✓ — ${polylines.length} surcos largos detectados.` : 'Procesado sin mano detectada.', lms?'ok':'err');
+    }catch(err){
+      console.error(err);
+      setStatus('Error procesando: ' + (err && err.message ? err.message : err), 'err');
+    }finally{
+      trash.forEach(m => { try{ m.delete(); }catch(e){} });
+      running = false;
+    }
+  }
+
+  /* ----- Marco local de la palma a partir de landmarks (rotación-tolerante) ----- */
+  function palmFrame(lms, W, H){
+    const P = i => ({ x: lms[i].x*W, y: lms[i].y*H });
+    const wrist = P(0), midMcp = P(9), idxMcp = P(5), thumbMcp = P(2);
+    const u = norm(sub(midMcp, wrist));            // wrist → nudillo medio (vertical de la palma)
+    const r = { x: u.y, y: -u.x };                 // perpendicular
+    const len = dist(midMcp, wrist) || 1;
+    // lado del pulgar (signo de "across") para normalizar zonas
+    const thumbSide = Math.sign(dot(sub(thumbMcp, wrist), r)) || 1;
+    return { wrist, u, r, len, thumbSide, idxMcp, midMcp, thumbMcp,
+             pinkyMcp: P(17), indexTip: P(8) };
+  }
+  // Polígono que encierra la palma (sin dedos): muñeca → base pulgar → nudillos.
+  function palmPolygon(lms, W, H){
+    const idx = [0,1,2,5,9,13,17];   // wrist, thumb_cmc, thumb_mcp, index/middle/ring/pinky mcp
+    return idx.map(i => [Math.round(lms[i].x*W), Math.round(lms[i].y*H)]);
+  }
+
+  /* ----- Clasificación heurística por zona de la palma ----- */
+  function clasificar(polylines, palm){
+    // Perfil esperado de cada línea en coordenadas locales (a=along wrist→dedos, c=across con pulgar negativo).
+    // orient: 'v' aprox. vertical (sigue u) · 'h' aprox. horizontal (sigue r).
+    const perfiles = {
+      corazon: { a:0.86, c:0.15, orient:'h', color:[255,119,170] },
+      cabeza:  { a:0.66, c:-0.10, orient:'h', color:[93,180,255] },
+      vida:    { a:0.45, c:-0.45, orient:'v', color:[67,217,163] },
+      destino: { a:0.45, c:0.05, orient:'v', color:[235,200,120] },
+    };
+    const cand = polylines.map(pl => ({ pl, m: metricasLocales(pl, palm) }));
+    const elegido = {};
+    for(const nombre in perfiles){
+      const pf = perfiles[nombre];
+      let best=null, bestCost=Infinity;
+      for(const c of cand){
+        if(c.usado) continue;
+        const dOrient = (c.m.orient===pf.orient) ? 0 : 0.6;
+        const cost = Math.hypot(c.m.a-pf.a, (c.m.c-pf.c)) + dOrient - c.m.norm*0.15;
+        if(cost<bestCost){ bestCost=cost; best=c; }
+      }
+      if(best && bestCost < 0.95){ best.usado=true; elegido[nombre] = { pts: best.pl.pts, color: pf.color }; }
+    }
+    // los no elegidos quedan como "otros surcos" (gris) para verlos igual
+    elegido.__otros = cand.filter(c=>!c.usado).map(c=>c.pl.pts);
+    return elegido;
+  }
+  function metricasLocales(pl, palm){
+    const pts = pl.pts;
+    let sa=0, sc=0;
+    for(const [x,y] of pts){ const v={x:x-palm.wrist.x, y:y-palm.wrist.y};
+      sa += dot(v,palm.u)/palm.len; sc += (dot(v,palm.r)/palm.len)*palm.thumbSide; }
+    const a = sa/pts.length, c = sc/pts.length;
+    const dir = norm(sub({x:pts[pts.length-1][0],y:pts[pts.length-1][1]}, {x:pts[0][0],y:pts[0][1]}));
+    const alongU = Math.abs(dot(dir, palm.u)), alongR = Math.abs(dot(dir, palm.r));
+    return { a, c, orient: alongU>=alongR ? 'v' : 'h', norm: Math.min(1, pl.len/(palm.len*1.6)) };
+  }
+
+  /* ----- helpers de vectores ----- */
+  function sub(a,b){ return {x:a.x-b.x, y:a.y-b.y}; }
+  function dot(a,b){ return a.x*b.x + a.y*b.y; }
+  function dist(a,b){ return Math.hypot(a.x-b.x, a.y-b.y); }
+  function norm(a){ const m=Math.hypot(a.x,a.y)||1; return {x:a.x/m, y:a.y/m}; }
+
+  /* ----- pintado ----- */
+  function pintarStage(sel, mat){ cv.imshow($(sel), mat); }
+  function maskedPreview(src, mask, T){
+    // oscurece lo de fuera de la palma para ver bien el recorte
+    const inv = T(new cv.Mat()); cv.bitwise_not(mask, inv);
+    const dark = T(new cv.Mat()); src.copyTo(dark);
+    dark.setTo(new cv.Scalar(10,10,40,255), inv);
+    return dark;
+  }
+  function dibujarResultado(workCanvas, polylines, clas){
+    const c = $('#result'); c.width=workCanvas.width; c.height=workCanvas.height;
+    const ctx = c.getContext('2d'); ctx.drawImage(workCanvas,0,0);
+    // otros surcos (gris, finos)
+    if(clas.__otros){ ctx.lineWidth=1.5; ctx.strokeStyle='rgba(160,160,160,.55)';
+      for(const pts of clas.__otros) trazo(ctx, pts); }
+    // las 4 líneas principales (color + grueso + glow)
+    const nombres = ['vida','cabeza','corazon','destino'];
+    for(const n of nombres){ const L = clas[n]; if(!L) continue;
+      ctx.save(); ctx.lineWidth=4; ctx.lineCap='round'; ctx.lineJoin='round';
+      ctx.shadowColor = `rgb(${L.color.join(',')})`; ctx.shadowBlur=10;
+      ctx.strokeStyle = `rgb(${L.color.join(',')})`;
+      trazo(ctx, L.pts); ctx.restore();
+    }
+  }
+  function trazo(ctx, pts){ ctx.beginPath(); ctx.moveTo(pts[0][0],pts[0][1]);
+    for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i][0],pts[i][1]); ctx.stroke(); }
+
+  function reporte(polylines, clas, lms, minLen, palmLen){
+    const enc = ['vida','cabeza','corazon','destino'].filter(n=>clas[n]);
+    const lines = [
+      `Mano detectada: ${lms?'sí':'NO'}`,
+      `Largo de palma (px aprox): ${Math.round(palmLen)}`,
+      `Longitud mínima de línea: ${Math.round(minLen)} px`,
+      `Surcos largos detectados: ${polylines.length}`,
+      `Líneas principales clasificadas: ${enc.length}/4  [${enc.join(', ')||'ninguna'}]`,
+      clas.__otros ? `Otros surcos (gris): ${clas.__otros.length}` : '',
+      '',
+      'Sugerencia: si faltan líneas, baja "Longitud mínima" y sube "Realce/Contraste".',
+      'Si aparecen demasiadas arruguitas, sube "Longitud mínima" y baja "Sensibilidad (C)".'
+    ].filter(Boolean);
+    $('#report').textContent = lines.join('\n');
+  }
+  </script>
+</body>
+</html>
