@@ -32,6 +32,37 @@ function guiaTratado() {
   return _guiaCache;
 }
 
+// Red de seguridad: aunque se lo pedimos en el prompt, si el modelo se cuela con la
+// jerga de "montes"/planetas (confunde a la gente), la traducimos a lenguaje llano.
+function limpiarJerga(s) {
+  if (typeof s !== 'string') return s;
+  let t = s;
+  t = t.replace(/\b(?:el |la |los |las |tu |su |del |al |en el |en la )?montes?\s+de\s+venus/gi, 'la base del pulgar');
+  t = t.replace(/\bmontes?\s+de\s+la\s+luna/gi, 'el canto de la mano');
+  t = t.replace(/\bmontes?\s+de\s+j[uú]piter/gi, 'la zona bajo el índice');
+  t = t.replace(/\bmontes?\s+de\s+saturno/gi, 'la zona bajo el dedo medio');
+  t = t.replace(/\bmontes?\s+de\s+apolo(?:\s+o\s+del\s+sol)?/gi, 'la zona bajo el anular');
+  t = t.replace(/\bmontes?\s+de\s+mercurio/gi, 'la zona bajo el meñique');
+  t = t.replace(/\bmontes?\s+de\s+marte/gi, 'los lados de la palma');
+  t = t.replace(/\bdedos?\s+de\s+venus/gi, 'pulgar');
+  t = t.replace(/\bdedos?\s+de\s+j[uú]piter/gi, 'índice');
+  t = t.replace(/\bdedos?\s+de\s+saturno/gi, 'dedo medio');
+  t = t.replace(/\bdedos?\s+de\s+apolo(?:\s+o\s+del\s+sol)?/gi, 'anular');
+  t = t.replace(/\bdedos?\s+de\s+mercurio/gi, 'meñique');
+  t = t.replace(/\bmontes\b/gi, 'zonas de la palma');
+  t = t.replace(/\bmonte\b/gi, 'zona de la palma');
+  return t.replace(/\s{2,}/g, ' ').trim();
+}
+function limpiarLectura(l) {
+  if (!l || typeof l !== 'object') return l;
+  l.saludo = limpiarJerga(l.saludo);
+  l.montes = limpiarJerga(l.montes);
+  l.cierre = limpiarJerga(l.cierre);
+  if (Array.isArray(l.lineas)) l.lineas.forEach(x => { if (x) { x.observacion = limpiarJerga(x.observacion); x.lectura = limpiarJerga(x.lectura); } });
+  if (Array.isArray(l.consejos)) l.consejos = l.consejos.map(limpiarJerga);
+  return l;
+}
+
 // Modelo de VISIÓN. gpt-4o-mini casi no "mira" la foto y devuelve lecturas
 // genéricas iguales para todos; gpt-4o sí analiza la imagen con detalle.
 // Se puede sobreescribir con OPENAI_MODEL en el entorno.
@@ -74,20 +105,20 @@ FORMA DE LA MANO (quirognomía de D'Arpentigny):
 Piel fina = mente intelectual; piel áspera = trabajo manual. Mano grande = minuciosidad; pequeña = visión de conjunto.
 
 DEDOS (mídelos respecto a la palma; "largos" si superan ~80% de la palma):
-• Pulgar (Venus) = voluntad y lógica. Ángulo amplio (≈90°) = seguridad e independencia; cerrado = influenciable. Largo = dominante; corto = carácter más blando. Rígido = tenaz; flexible = complaciente.
-• Índice (Júpiter) = ambición, liderazgo, autoestima. Largo = orgullo y mando; corto = ambición impaciente.
-• Medio (Saturno) = responsabilidad, equilibrio, prudencia. Largo = análisis; corto = mente más ligera.
-• Anular (Apolo) = arte, creatividad, éxito. Largo = energía y voluntad expresiva.
-• Meñique (Mercurio) = comunicación, negocios, vínculos íntimos. Largo = elocuencia y estudio.
+• Pulgar = voluntad y lógica. Ángulo amplio (≈90°) = seguridad e independencia; cerrado = influenciable. Largo = dominante; corto = carácter más blando. Rígido = tenaz; flexible = complaciente.
+• Índice = ambición, liderazgo, autoestima. Largo = orgullo y mando; corto = ambición impaciente.
+• Medio = responsabilidad, equilibrio, prudencia. Largo = análisis; corto = mente más ligera.
+• Anular = arte, creatividad, éxito. Largo = energía y voluntad expresiva.
+• Meñique = comunicación, negocios, vínculos íntimos. Largo = elocuencia y estudio.
 Dedos rectos = persona satisfecha; torcidos = tendencia a las dificultades. Yemas cuadradas = sentido práctico; cónicas = sensibilidad; espatuladas = acción.
 
 LÍNEAS MAYORES (lee NACIMIENTO, RECORRIDO, FINAL, PROFUNDIDAD y MARCAS):
-• VIDA (rodea el monte de Venus, del índice a la muñeca): vitalidad, salud, energía, raíces. Amplia rodeando Venus = vida plena y vigor; ceñida = reserva. Arranque alto (junto a Júpiter) = ambición; bajo = introversión. Termina rodeando Venus = apego al hogar; hacia el centro = amor por los viajes. Cadenas/islas = altibajos; barras = momentos de tensión; ramas hacia arriba = mejoras.
+• VIDA (rodea la base del pulgar, del índice hacia la muñeca): vitalidad, salud, energía, raíces. Arco amplio (se abre hacia el centro de la palma) = vida plena y vigor; ceñida al pulgar = reserva. Arranque alto (junto al índice) = ambición; bajo = introversión. Termina abrazando la base del pulgar = apego al hogar; hacia el centro = amor por los viajes. Cadenas/islas = altibajos; barras = momentos de tensión; ramas hacia arriba = mejoras.
 • CABEZA (cruza la palma): mente, lógica, forma de pensar. Unida a la de la vida al nacer = sensibilidad y fuerte influencia familiar; separada = independencia y seguridad. Recta = lógica y realismo; curva hacia abajo = imaginación y creatividad. Larga = inteligencia profunda; corta = mente práctica y rápida. Bifurcada al final = versatilidad ("horquilla del escritor").
 • CORAZÓN (arco superior, bajo los dedos): amor, emociones, vínculos. Alta (cerca de los dedos) = emotividad intensa; baja = sentimientos contenidos. Curva hacia arriba = apasionada y expresiva; recta y paralela a la cabeza = afecto cerebral pero leal. Termina bajo Júpiter (índice) = amor equilibrado e idealista; bajo Saturno (medio) = inquietud sentimental. Ramas ascendentes = afectos felices; descendentes = desengaños superables.
-• DESTINO/Saturno (vertical hacia el dedo medio; a veces ausente): rumbo, vocación, libre albedrío. Profunda y recta = propósito claro y camino propio. Nace en Venus o junto a la vida = fuerte influencia de la familia; nace en la Luna (canto) = independencia temprana. Termina en Saturno = metas cumplidas; quebrada = cambios de rumbo; tenue o ausente = vida autodirigida y libre. IMPORTANTE: aunque esta línea se vea tenue, corta o difícil de distinguir, NUNCA la dejes con "observacion" o "lectura" vacías: describe que se ve débil/poco marcada e interpreta que tu rumbo lo defines tú mismo, con libertad.
+• DESTINO/Saturno (vertical hacia el dedo medio; a veces ausente): rumbo, vocación, libre albedrío. Profunda y recta = propósito claro y camino propio. Nace cerca de la base del pulgar o junto a la línea de la vida = fuerte influencia de la familia; nace en el canto de la mano = independencia temprana. Termina en Saturno = metas cumplidas; quebrada = cambios de rumbo; tenue o ausente = vida autodirigida y libre. IMPORTANTE: aunque esta línea se vea tenue, corta o difícil de distinguir, NUNCA la dejes con "observacion" o "lectura" vacías: describe que se ve débil/poco marcada e interpreta que tu rumbo lo defines tú mismo, con libertad.
 RASGOS DE CUALQUIER LÍNEA: profunda/clara = fuerte e influyente; tenue = sutil; cadenas/islas = obstáculos o sensibilidad; ramas hacia arriba = logros; cortes = cambios; bifurcaciones = versatilidad.
-MONTES: Venus (base del pulgar)=amor, vigor, calidez; Luna (canto, junto a la muñeca)=imaginación e intuición; Júpiter (bajo índice)=ambición y liderazgo; Saturno (bajo medio)=responsabilidad; Apolo (bajo anular)=arte y éxito; Mercurio (bajo meñique)=comunicación y negocios; Marte (a los lados)=valor. Monte lleno = esa cualidad es fuerte. Marcas: estrella=acontecimiento intenso; cruz=prueba; triángulo=talento; rejilla=obstáculo.
+ZONAS CARNOSAS DE LA PALMA (para TU interpretación; NO nombres estas zonas en la lectura, descríbelas en lenguaje llano): base del pulgar = amor, vigor, calidez; canto de la mano junto a la muñeca = imaginación e intuición; bajo el índice = ambición y liderazgo; bajo el dedo medio = responsabilidad; bajo el anular = arte y éxito; bajo el meñique = comunicación y negocios; los lados de la palma = valor. Zona llena/abultada = esa cualidad es fuerte. Marcas: estrella=acontecimiento intenso; cruz=prueba; triángulo=talento; rejilla=obstáculo.
 
 PROTOCOLO DE OBSERVACIÓN OBLIGATORIO (haz esto ANTES de escribir nada):
 Mira la fotografía con muchísima atención y MIDE rasgos concretos y visibles de ESTA mano en particular. Cada mano es única, así que estos datos DEBEN cambiar de una persona a otra:
@@ -102,7 +133,8 @@ Para CADA línea, traza POR DÓNDE PASA REALMENTE en ESTA fotografía y devuelve
 
 Reglas:
 - REGLA #1 (la más importante): SIEMPRE entrega una lectura COMPLETA de las 4 líneas, pase lo que pase. Aunque la foto esté borrosa, oscura, tomada de lejos, con la mano pequeña, ladeada, con sombras o solo se vea parte de la palma, INTERPRETA lo que puedas y completa el resto con la lectura típica de una mano. Mientras se intuya una mano, hazlo. JAMÁS devuelvas el resultado vacío, JAMÁS digas que la imagen no sirve o que no puedes leerla, JAMÁS pidas otra foto. Eso está terminantemente PROHIBIDO.
-- Enfócate EXCLUSIVAMENTE en la QUIROMANCIA: las líneas, los montes y la forma de la mano. NO uses astrología, signos zodiacales ni horóscopos.
+- Enfócate EXCLUSIVAMENTE en la QUIROMANCIA: las líneas y la forma de la mano. NO uses astrología, signos zodiacales ni horóscopos.
+- LENGUAJE SENCILLO (MUY IMPORTANTE): escribe para alguien que NO sabe de quiromancia. PROHIBIDO usar la jerga de "montes" y en especial la expresión "monte de Venus" (es confusa y repetitiva); tampoco uses nombres de planetas para dedos o zonas (Venus, Júpiter, Saturno, Apolo, Mercurio, Luna, Marte). Nombra las zonas en lenguaje llano: "la base del pulgar", "bajo el dedo índice", "el centro de la palma", "el canto de la mano". No repitas la misma zona una y otra vez.
 - Para CADA línea, el campo "observacion" DEBE citar al menos DOS rasgos concretos y visibles de ESA línea en ESTA palma (su recorrido, largo, profundidad, curva, cadenas, islas, ramas, cortes...). LUEGO, en "lectura", interpreta exactamente eso que observaste: la lectura tiene que derivarse de la observación, no al revés.
 - PROHIBIDO LO GENÉRICO: si una frase podría aplicarse a CUALQUIER mano, está MAL escrita; reescríbela citando un detalle concreto que VES en la foto. Dos personas distintas DEBEN recibir lecturas claramente diferentes entre sí. Nunca uses una plantilla fija ni repitas las mismas frases hechas; varía el vocabulario y los matices según lo que muestre cada palma.
 - PERSONALIZA con los datos de la persona: dirígete a ella por su NOMBRE con naturalidad y AJUSTA el énfasis a su ETAPA DE VIDA (si es joven, proyecta hacia el futuro que se abre ante ella; si tiene más años, reconoce su trayectoria y confirma su camino). La mano IZQUIERDA habla de lo heredado, el pasado y el mundo interior; la DERECHA, de lo que se está forjando hacia el futuro y el mundo exterior: matiza la lectura según cuál sea. NO uses el zodíaco ni inventes datos que no observes.
@@ -110,11 +142,13 @@ Reglas:
 - ENFOQUE POR TEMA: si la persona eligió un tema de interés (amor, dinero, trabajo, familia o salud), ENFOCA cerca del 80% de la lectura en ese tema: interpreta CADA línea desde esa óptica (qué dice tu mano sobre ESE tema) y resalta lo que más le importa; el 20% restante, una visión general. Si el tema es "general", reparte el enfoque de forma equilibrada.
 - CONSEJOS (OBLIGATORIO, JAMÁS lo omitas ni lo dejes vacío): termina SIEMPRE con "consejos", un arreglo de 2 o 3 recomendaciones breves y prácticas, en tu estilo, DERIVADAS de lo que observaste en las líneas y CENTRADAS en el tema elegido (p. ej. dinero: "Cuida lo que gastas y aparta un ahorro cada mes"; amor: "Escucha de verdad y di lo que sientes"; trabajo: "Apuesta por lo que se te da bien"). Cada lectura DEBE tener consejos DISTINTOS y personalizados (otra persona recibiría otros); nunca uses frases hechas ni los mismos de siempre. Son guiños de oráculo para reflexionar, NO órdenes.
 - TEXTO PLANO: NO uses markdown en NINGÚN campo (nada de asteriscos *, negritas **, almohadillas # ni guiones de lista): responde solo con texto plano.
-- OBLIGATORIO: NUNCA dejes el arreglo "lineas" vacío ni dejes "observacion"/"lectura" en blanco. SIEMPRE devuelve las CUATRO líneas mayores (vida, corazón, cabeza, destino), cada una con su lectura propia y DISTINTA de las demás. Aunque la mano se vea pequeña, lejana, mal iluminada o la foto no sea perfecta, haz tu MEJOR interpretación con lo que SÍ alcances a ver; jamás devuelvas campos vacíos ni te niegues. En "montes" describe la forma real de la mano y los dedos que observaste (cuadrada/alargada, dedos largos/cortos, pulgar) y relaciónalo con los montes.
+- OBLIGATORIO: NUNCA dejes el arreglo "lineas" vacío ni dejes "observacion"/"lectura" en blanco. SIEMPRE devuelve las CUATRO líneas mayores (vida, corazón, cabeza, destino), cada una con su lectura propia y DISTINTA de las demás. Aunque la mano se vea pequeña, lejana, mal iluminada o la foto no sea perfecta, haz tu MEJOR interpretación con lo que SÍ alcances a ver; jamás devuelvas campos vacíos ni te niegues. En "montes" describe la FORMA de la mano y los dedos que observaste (cuadrada/alargada, dedos largos/cortos, el pulgar) en lenguaje sencillo; NO uses la palabra "monte" ni "monte de Venus".
 - A cada línea asígnale un "color" según el significado DOMINANTE de lo que revela, eligiendo SOLO uno de estos: "verde" (vida, vitalidad, salud), "azul" (riqueza, prosperidad, abundancia, mente), "rosa" (amor, afectos), "dorado" (destino, éxito, fortuna), "morado" (intuición, espiritualidad) o "rojo" (advertencias o aspectos difíciles). Normalmente: Vida→verde, Corazón→rosa, Cabeza→azul, Destino→dorado; usa "rojo" solo si esa línea muestra algo que conviene cuidar.
 - Tono positivo e inspirador (respetando tu personalidad). Es para entretenimiento y autorreflexión: los "consejos" son sugerencias ligeras y positivas en clave de oráculo, NO asesoría médica, legal ni financiera profesional ni diagnósticos; no des fechas exactas.
+- DETECCIÓN DE MANO: incluye SIEMPRE el campo booleano "esMano". Ponlo en true si la imagen muestra una mano o palma humana (aunque esté borrosa, de lejos, ladeada o parcial). Ponlo en false SOLO si la imagen claramente NO contiene una mano (una cara, un objeto, un animal, un paisaje, texto, etc.). Ante la MÍNIMA duda, true. Si "esMano" es false, NO inventes líneas ni consejos.
 - Responde EXCLUSIVAMENTE con un objeto JSON válido (sin markdown ni texto extra), con EXACTAMENTE esta forma:
 {
+  "esMano": true,
   "saludo": "1 frase breve de bienvenida usando el nombre, en tu estilo",
   "lineas": [
     {"nombre":"Línea de la Vida","simbolo":"🌿","color":"verde","puntos":[[x,y],[x,y],[x,y],[x,y],[x,y]],"observacion":"1 frase corta sobre cómo se ve esta línea en su palma","lectura":"2-3 frases de interpretación directa (máx ~40 palabras), enfocadas en el tema elegido"},
@@ -122,14 +156,14 @@ Reglas:
     {"nombre":"Línea de la Cabeza","simbolo":"🧠","color":"azul","puntos":[[x,y],...],"observacion":"...","lectura":"..."},
     {"nombre":"Línea del Destino","simbolo":"⭐","color":"dorado","puntos":[[x,y],...],"observacion":"...","lectura":"..."}
   ],
-  "montes": "1-2 frases sobre los montes (Venus, Júpiter, Apolo) y la forma de la mano",
+  "montes": "1-2 frases sobre la FORMA de tu mano y tus dedos, en lenguaje sencillo (SIN jerga de 'montes' ni 'monte de Venus')",
   "consejos": ["consejo breve 1 sobre el tema elegido", "consejo breve 2", "consejo breve 3 (opcional)"],
   "cierre": "1 frase de cierre inspirador, en tu estilo"
 }`;
   // Refuerzo: tratado de quiromancia (public/docs/quiromancia.txt) como referencia ampliada.
   const guia = guiaTratado();
   const ref = guia
-    ? `\n\n=== TRATADO DE QUIROMANCIA (referencia ampliada) ===\nApóyate en este tratado para INTERPRETAR con más profundidad, precisión y vocabulario variado lo que observas en la palma (montes, llanos y líneas). Respeta SIEMPRE las reglas de formato, brevedad y ENFOQUE POR TEMA de arriba; NO copies frases literales del tratado: úsalo como conocimiento para variar y enriquecer cada lectura.\n\n${guia}`
+    ? `\n\n=== TRATADO DE QUIROMANCIA (referencia ampliada) ===\nApóyate en este tratado para INTERPRETAR con más profundidad, precisión y vocabulario variado lo que observas en la palma (forma, dedos y líneas). Respeta SIEMPRE las reglas de formato, brevedad, LENGUAJE SENCILLO y ENFOQUE POR TEMA de arriba; NO copies frases literales del tratado ni su jerga de "montes": úsalo como conocimiento para variar y enriquecer cada lectura.\n\n${guia}`
     : '';
   return base + ref;
 }
@@ -240,16 +274,23 @@ async function handleLectura(body) {
       let parsed = null;
       try { parsed = JSON.parse(txt); }
       catch (e) { const mm = txt.match(/\{[\s\S]*\}/); if (mm) { try { parsed = JSON.parse(mm[0]); } catch (_) {} } }
+      // El oráculo confirma que NO es una mano → corta y avisa (red de seguridad del filtro).
+      if (parsed && parsed.esMano === false) { lectura = { noEsMano: true }; break; }
       if (parsed && Array.isArray(parsed.lineas) && parsed.lineas.length) { lectura = parsed; break; }
       if (parsed && typeof parsed === 'object') lectura = lectura || parsed; // guarda algo por si todos fallan
     } catch (e) { /* error de red hacia OpenAI → reintenta */ }
+  }
+  // Si se confirmó que la imagen no es una mano, se lo decimos al front (alerta).
+  if (lectura && lectura.noEsMano) {
+    return { status: 200, data: { lectura: { noEsMano: true } } };
   }
   // Para depurar si la API está caída (clave/saldo): queda en los logs, no se muestra.
   if (!lectura || !Array.isArray(lectura.lineas) || !lectura.lineas.length) {
     try { console.warn('handleLectura: sin líneas tras 3 intentos (¿API/saldo de OpenAI?).'); } catch (e) {}
   }
   // Siempre 200 con una lectura (real, parcial o vacía → el front la completa).
-  return { status: 200, data: { lectura: lectura || {} } };
+  // Limpiamos la jerga de "montes"/planetas por si el modelo se coló.
+  return { status: 200, data: { lectura: limpiarLectura(lectura) || {} } };
 }
 
 async function handleTranscribe(body) {

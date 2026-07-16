@@ -776,8 +776,8 @@
 <!-- ============ MODAL REINTENTAR (foto de la mano no legible) ============ -->
 <div id="modal-reintentar">
   <div class="glass modal-card">
-    <div class="sello">📷</div>
-    <h2>Tu palma no se vio con claridad</h2>
+    <div class="sello" id="reintentar-sello">📷</div>
+    <h2 id="reintentar-titulo">Tu palma no se vio con claridad</h2>
     <p id="reintentar-msg">No logramos distinguir las líneas de tu palma en esta foto.</p>
     <p>Para una buena lectura: muestra la <b style="color:var(--oro-suave)">palma completa</b> de frente, con <b style="color:var(--oro-suave)">buena luz</b>, la mano <b style="color:var(--oro-suave)">cerca</b> de la cámara y los dedos algo separados.</p>
     <div style="margin-top:20px; display:flex; flex-direction:column; gap:10px">
@@ -1087,14 +1087,16 @@ async function guardarImagen(fuente, w, h, espejo){
 
   if(r.estado === 'sin-mano'){
     $('#err-camara').innerHTML =
-      'Solo puedo leer <b>manos</b> ✋. No detecté una palma en la foto: '
-      + 'acerca la mano, con buena luz y la palma bien abierta, e inténtalo de nuevo.';
+      '✋ <b>Eso no es una mano.</b> Solo puedo leer una <b>palma</b>: '
+      + 'muéstrala abierta, de frente, cerca de la cámara y con buena luz, e inténtalo de nuevo.';
     return;   // seguimos en la cámara para reintentar al instante
   }
 
-  // Hay mano (o el modelo no cargó): guardamos y avanzamos.
+  // Hay mano (o el modelo no cargó). Si NO la pudimos verificar aquí (no-listo),
+  // el backend hará de segunda barrera (campo esMano) para no dejarlo "suelto".
   estado.dataUrl = dataUrl;
   estado.landmarks = (r.estado === 'mano') ? r.landmarks : null;   // ancla las líneas si la tenemos
+  estado.manoVerificada = (r.estado === 'mano');
   $('#err-camara').textContent = '';
   detenerCamara();
   // Tras la foto, el usuario elige el ENFOQUE de su lectura (amor, dinero, ...).
@@ -1137,6 +1139,13 @@ async function iniciarLectura(){
     estado.lectura = { error: e.message };
   }
   detenerCiclo();
+  // Segunda barrera del filtro "solo manos": si aquí no verificamos la mano (el
+  // detector local no cargó) y el oráculo confirma que NO es una mano, avisamos.
+  if(!estado.manoVerificada && estado.lectura && estado.lectura.noEsMano){
+    mostrarReintento('Lo que veo en la foto no parece una mano. Toma la foto a tu palma abierta, de frente.',
+                     'Eso no es una mano ✋', '✋');
+    return;
+  }
   // Si la palma no se pudo leer (foto borrosa/lejana o error), pedimos repetir la
   // foto en vez de mostrar una pantalla vacía. Solo contamos las lecturas que sí salieron.
   if(!lecturaUsable(estado.lectura)){ mostrarReintento(mensajeReintento(estado.lectura)); return; }
@@ -1153,8 +1162,10 @@ function mensajeReintento(a){
   if(/palma|foto|límite|correo/i.test(e)) return e;
   return 'No logramos distinguir las líneas de tu palma en esta foto.';
 }
-function mostrarReintento(msg){
+function mostrarReintento(msg, titulo, sello){
   const t = $('#reintentar-msg'); if(t) t.textContent = msg || 'No logramos leer tu palma.';
+  const h = $('#reintentar-titulo'); if(h) h.textContent = titulo || 'Tu palma no se vio con claridad';
+  const s = $('#reintentar-sello'); if(s) s.textContent = sello || '📷';
   $('#modal-reintentar').classList.add('activo');
 }
 $('#btn-reintentar-foto').addEventListener('click', () => {
@@ -1205,7 +1216,7 @@ function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').rep
 // Respaldo: si el oráculo no devuelve líneas (foto difícil o respuesta vacía),
 // SIEMPRE mostramos las 4 cajas con una lectura general, nunca una pantalla en blanco.
 const LINEAS_BASE = [
-  { nombre:'Línea de la Vida',    simbolo:'🌿', color:'verde',  observacion:'Rodea la base del pulgar (monte de Venus).',
+  { nombre:'Línea de la Vida',    simbolo:'🌿', color:'verde',  observacion:'Rodea la base del pulgar.',
     lectura:'Tu vitalidad es firme y constante: afrontas la vida con energía y arraigo.' },
   { nombre:'Línea del Corazón',   simbolo:'❤️', color:'rosa',   observacion:'Recorre el arco alto, bajo los dedos.',
     lectura:'Sientes con intensidad y entregas un afecto verdadero a quienes amas.' },
@@ -1302,7 +1313,7 @@ function renderResultado(){
     }).join('');
     // Montes y forma de la mano (su propio bloque).
     extraEl.innerHTML = a.montes
-      ? '<div class="lc-tit" style="color:var(--oro-suave)">✋ Montes y forma de la mano</div><div class="lc-txt">'+esc(a.montes)+'</div>'
+      ? '<div class="lc-tit" style="color:var(--oro-suave)">✋ Tu mano y tus dedos</div><div class="lc-txt">'+esc(a.montes)+'</div>'
       : '';
     extraEl.hidden = !a.montes;
     // Tarjeta dedicada de CONSEJOS (lo que pidió el usuario).
@@ -1598,7 +1609,7 @@ function compilarPrediccion(){
     t += (l.lectura || '');
     partes.push(t);
   });
-  if(a.montes) partes.push('Montes y forma de la mano. ' + a.montes);
+  if(a.montes) partes.push('Tu mano y tus dedos. ' + a.montes);
   const consejos = consejosDe(a);
   if(consejos.length) partes.push('Consejos del oráculo. ' + consejos.join(' '));
   if(a.cierre) partes.push(a.cierre);
