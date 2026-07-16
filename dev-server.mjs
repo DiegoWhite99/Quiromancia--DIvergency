@@ -79,6 +79,9 @@ const server = createServer(async (req, res) => {
   try {
     const data = await readFile(full);
     res.setHeader('content-type', TIPOS[extname(full)] || 'application/octet-stream');
+    // En desarrollo NO cacheamos el HTML/JS: así el navegador siempre carga la
+    // última versión y no hace falta el "refresco forzado" tras cada cambio.
+    if (['.html', '.js'].includes(extname(full))) res.setHeader('Cache-Control', 'no-store, must-revalidate');
     res.end(data);
   } catch { res.statusCode = 500; res.end('Error'); }
 });
