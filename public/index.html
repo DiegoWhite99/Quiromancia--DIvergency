@@ -1085,18 +1085,14 @@ async function guardarImagen(fuente, w, h, espejo){
   if(window.escanearMano){ try{ r = await window.escanearMano(cv); }catch(e){} }
   verificando(false);
 
-  if(r.estado === 'sin-mano'){
-    // Alerta clara y visible (no un texto pequeño): no es una mano.
-    mostrarReintento('Lo que veo no parece una mano. Muestra tu palma abierta, de frente y con buena luz.',
-                     'Eso no es una mano ✋', '✋');
-    return;
-  }
-
-  // Hay mano (o el modelo no cargó). Si NO la pudimos verificar aquí (no-listo),
-  // el backend hará de segunda barrera (campo esMano) para no dejarlo "suelto".
+  // IMPORTANTE: NO rechazamos aquí. MediaPipe a veces NO ve una mano REAL (ángulo,
+  // luz, encuadre), así que su "no la veo" NO es prueba de que no sea una mano.
+  // Guardamos y dejamos que el ORÁCULO (backend) decida: él distingue bien una
+  // palma de una cara/objeto y acepta manos imperfectas. Si MediaPipe SÍ la vio,
+  // usamos sus puntos para anclar las líneas.
   estado.dataUrl = dataUrl;
-  estado.landmarks = (r.estado === 'mano') ? r.landmarks : null;   // ancla las líneas si la tenemos
-  estado.manoVerificada = (r.estado === 'mano');
+  estado.landmarks = (r.estado === 'mano') ? r.landmarks : null;
+  estado.manoVerificada = (r.estado === 'mano');   // true = seguro es mano; el backend ni duda
   $('#err-camara').textContent = '';
   detenerCamara();
   // Tras la foto, el usuario elige el ENFOQUE de su lectura (amor, dinero, ...).
@@ -1139,10 +1135,10 @@ async function iniciarLectura(){
     estado.lectura = { error: e.message };
   }
   detenerCiclo();
-  // El oráculo (backend) es la AUTORIDAD final sobre si hay una mano. Si dice que
-  // NO es una mano (cara, celular, objeto...), SIEMPRE mostramos la alerta, aunque
-  // el detector local se hubiera confundido. Así el aviso nunca se queda "suelto".
-  if(estado.lectura && estado.lectura.noEsMano){
+  // Alerta "no es una mano" SOLO cuando el detector local NO confirmó una mano
+  // (si MediaPipe ya vio la mano, confiamos y NUNCA la rechazamos, aunque el
+  // backend dude). Si MediaPipe no la vio, manda el veredicto del oráculo (esMano).
+  if(!estado.manoVerificada && estado.lectura && estado.lectura.noEsMano){
     mostrarReintento('Lo que veo en la foto no parece una mano. Toma la foto a tu palma abierta, de frente.',
                      'Eso no es una mano ✋', '✋');
     return;
