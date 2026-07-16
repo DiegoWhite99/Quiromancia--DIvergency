@@ -5,9 +5,10 @@
 const fs = require('fs');
 const path = require('path');
 
-// Carga (y cachea) el tratado de quiromancia (public/docs/quiromancia.txt) para
-// REFORZAR las lecturas. Se queda con la parte interpretativa (de "LOS MONTES" en
-// adelante: montes, llanos y todas las líneas), saltando la historia inicial.
+// Carga (y cachea) la GUÍA de quiromancia (public/docs/quiromancia.txt), destilada
+// del libro base, para REFORZAR las lecturas. La guía ya es 100% interpretativa
+// (tipos de mano, dedos, montes, líneas mayores/menores y marcas): se usa completa;
+// solo se normaliza y se limita el tamaño para mantener el prompt ligero.
 let _guiaCache = null;
 function guiaTratado() {
   if (_guiaCache !== null) return _guiaCache;
@@ -21,14 +22,10 @@ function guiaTratado() {
     try { if (fs.existsSync(p)) { txt = fs.readFileSync(p, 'utf8'); break; } } catch (e) {}
   }
   if (txt) {
-    // Nos quedamos con lo MÁS útil para una lectura (las líneas) y recortamos fuerte
-    // para que el prompt no pese demasiado: peticiones más rápidas y fiables.
-    let i = txt.indexOf('LAS LÍNEAS');
-    if (i < 0) i = txt.indexOf('LOS MONTES');
-    if (i < 0) i = txt.indexOf('LOS DEDOS');
-    if (i > 0) txt = txt.slice(i);
+    // La guía ya es toda interpretativa: se usa completa. Solo normalizamos y
+    // limitamos el tamaño para mantener el prompt ligero (peticiones más rápidas).
     txt = txt.replace(/\r/g, '').replace(/\n{3,}/g, '\n\n').trim();
-    const MAX = 16000;   // ~4k tokens (antes ~12k): mucho más ligero
+    const MAX = 20000;   // ~5k tokens: la guía destilada (~13 KB) entra completa
     if (txt.length > MAX) txt = txt.slice(0, MAX);
   }
   _guiaCache = txt;
@@ -111,7 +108,8 @@ Reglas:
 - PERSONALIZA con los datos de la persona: dirígete a ella por su NOMBRE con naturalidad y AJUSTA el énfasis a su ETAPA DE VIDA (si es joven, proyecta hacia el futuro que se abre ante ella; si tiene más años, reconoce su trayectoria y confirma su camino). La mano IZQUIERDA habla de lo heredado, el pasado y el mundo interior; la DERECHA, de lo que se está forjando hacia el futuro y el mundo exterior: matiza la lectura según cuál sea. NO uses el zodíaco ni inventes datos que no observes.
 - Las lecturas deben ser potentes y con sustancia: 2 o 3 frases por línea (máximo ~40 palabras cada una), directas, afirmativas y en segunda persona. TODA la lectura debe poder leerse en voz alta en cerca de minuto y medio (en total, unas 210 palabras). Ejemplo del tono (NO lo copies literal): "Tu línea de la vida nace pegada a la de la cabeza y se ensancha cerca de la muñeca: revela cautela al empezar y una vitalidad que florece con los años." Evita frases vagas y relleno, pero da una lectura rica y desarrollada.
 - ENFOQUE POR TEMA: si la persona eligió un tema de interés (amor, dinero, trabajo, familia o salud), ENFOCA cerca del 80% de la lectura en ese tema: interpreta CADA línea desde esa óptica (qué dice tu mano sobre ESE tema) y resalta lo que más le importa; el 20% restante, una visión general. Si el tema es "general", reparte el enfoque de forma equilibrada.
-- CONSEJOS: termina SIEMPRE con "consejos": 2 o 3 recomendaciones breves, prácticas y en tu estilo, relacionadas con el tema elegido (p. ej. dinero: "Cuida lo que gastas y aparta un ahorro cada mes"; amor: "Escucha de verdad y di lo que sientes"; trabajo: "Apuesta por lo que se te da bien"). Son guiños de oráculo para reflexionar, NO órdenes.
+- CONSEJOS (OBLIGATORIO, JAMÁS lo omitas ni lo dejes vacío): termina SIEMPRE con "consejos", un arreglo de 2 o 3 recomendaciones breves y prácticas, en tu estilo, DERIVADAS de lo que observaste en las líneas y CENTRADAS en el tema elegido (p. ej. dinero: "Cuida lo que gastas y aparta un ahorro cada mes"; amor: "Escucha de verdad y di lo que sientes"; trabajo: "Apuesta por lo que se te da bien"). Cada lectura DEBE tener consejos DISTINTOS y personalizados (otra persona recibiría otros); nunca uses frases hechas ni los mismos de siempre. Son guiños de oráculo para reflexionar, NO órdenes.
+- TEXTO PLANO: NO uses markdown en NINGÚN campo (nada de asteriscos *, negritas **, almohadillas # ni guiones de lista): responde solo con texto plano.
 - OBLIGATORIO: NUNCA dejes el arreglo "lineas" vacío ni dejes "observacion"/"lectura" en blanco. SIEMPRE devuelve las CUATRO líneas mayores (vida, corazón, cabeza, destino), cada una con su lectura propia y DISTINTA de las demás. Aunque la mano se vea pequeña, lejana, mal iluminada o la foto no sea perfecta, haz tu MEJOR interpretación con lo que SÍ alcances a ver; jamás devuelvas campos vacíos ni te niegues. En "montes" describe la forma real de la mano y los dedos que observaste (cuadrada/alargada, dedos largos/cortos, pulgar) y relaciónalo con los montes.
 - A cada línea asígnale un "color" según el significado DOMINANTE de lo que revela, eligiendo SOLO uno de estos: "verde" (vida, vitalidad, salud), "azul" (riqueza, prosperidad, abundancia, mente), "rosa" (amor, afectos), "dorado" (destino, éxito, fortuna), "morado" (intuición, espiritualidad) o "rojo" (advertencias o aspectos difíciles). Normalmente: Vida→verde, Corazón→rosa, Cabeza→azul, Destino→dorado; usa "rojo" solo si esa línea muestra algo que conviene cuidar.
 - Tono positivo e inspirador (respetando tu personalidad). Es para entretenimiento y autorreflexión: los "consejos" son sugerencias ligeras y positivas en clave de oráculo, NO asesoría médica, legal ni financiera profesional ni diagnósticos; no des fechas exactas.
@@ -222,13 +220,20 @@ async function handleLectura(body) {
   // el navegador no pueda llegar al servidor (error de red real).
   let lectura = null;
   for (let intento = 1; intento <= 3 && !lectura; intento++) {
+    const ac = new AbortController();
+    const timer = setTimeout(() => ac.abort(), 50000);   // corta un intento colgado
     try {
       const r = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: { 'content-type': 'application/json', authorization: `Bearer ${apiKey()}` },
-        body: JSON.stringify(cuerpo)
+        body: JSON.stringify(cuerpo),
+        signal: ac.signal
       });
-      if (!r.ok) continue;   // error de la API → reintenta
+      if (!r.ok) {   // error de la API → registra el motivo REAL y reintenta
+        const errTxt = await r.text().catch(() => '');
+        try { console.warn(`handleLectura intento ${intento}: HTTP ${r.status} ${errTxt.slice(0, 300)}`); } catch (e) {}
+        continue;
+      }
       const data = await r.json();
       let txt = (data.choices?.[0]?.message?.content || '').trim();
       txt = txt.replace(/^```(json)?/i, '').replace(/```$/, '').trim();

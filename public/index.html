@@ -824,7 +824,9 @@
       const fileset = await FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm');
       _lm = await HandLandmarker.createFromOptions(fileset, {
         baseOptions: { modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task' },
-        numHands: 1, runningMode: 'IMAGE'
+        // Confianza alta: solo damos por válida una MANO clara (nada de objetos parecidos).
+        numHands: 1, runningMode: 'IMAGE',
+        minHandDetectionConfidence: 0.6, minHandPresenceConfidence: 0.6
       });
       return _lm;
     })();
@@ -840,6 +842,21 @@
       if(res && res.landmarks && res.landmarks.length) return res.landmarks[0];
     }catch(e){ console.warn('MediaPipe mano:', e); }
     return null;
+  };
+  // FILTRO "SOLO MANOS": verifica que en la imagen HAYA una mano. Devuelve un estado:
+  //   { estado:'mano', landmarks } · { estado:'sin-mano' } · { estado:'no-listo' }
+  // 'no-listo' = el modelo no cargó (p. ej. sin red): el llamador decide no bloquear.
+  window.escanearMano = async function(el){
+    let lm;
+    try{ lm = await init(); }
+    catch(e){ console.warn('MediaPipe no disponible:', e); return { estado:'no-listo' }; }
+    try{
+      const res = lm.detect(el);
+      if(res && res.landmarks && res.landmarks.length){
+        return { estado:'mano', landmarks: res.landmarks[0] };
+      }
+    }catch(e){ console.warn('MediaPipe detect:', e); }
+    return { estado:'sin-mano' };
   };
 </script>
 
@@ -1038,7 +1055,17 @@ $('#file-input').addEventListener('change', (e) => {
   img.onload = () => guardarImagen(img, img.naturalWidth, img.naturalHeight, false);
   img.src = URL.createObjectURL(f);
 });
-function guardarImagen(fuente, w, h, espejo){
+// Muestra/oculta el estado "verificando" y bloquea los botones mientras tanto.
+function verificando(on){
+  const b=$('#btn-disparar'), g=$('#btn-galeria');
+  if(b){ b.disabled=on; b.style.opacity = on ? .5 : 1; }
+  if(g){ g.disabled=on; g.style.opacity = on ? .5 : 1; }
+  $('#hint-camara').textContent = on
+    ? '🔍 Verificando que sea tu mano…'
+    : 'Encuadra la palma de tu mano y escanea';
+}
+
+async function guardarImagen(fuente, w, h, espejo){
   // Más resolución y calidad = líneas finas más nítidas para que la IA lea de verdad
   // la palma (sigue muy por debajo del límite de subida de 12 MB).
   const MAX=1600, esc=Math.min(1, MAX/Math.max(w,h));
@@ -1047,15 +1074,28 @@ function guardarImagen(fuente, w, h, espejo){
   const ctx=cv.getContext('2d');
   if(espejo){ ctx.translate(cw,0); ctx.scale(-1,1); }      // espeja para coincidir con el preview
   ctx.drawImage(fuente,0,0,cw,ch);
-  estado.dataUrl = cv.toDataURL('image/jpeg', 0.92);
-  // Escanea la mano (MediaPipe, en segundo plano): cuando termina, las líneas se
-  // anclan a la mano real de la foto. El bucle del canvas lo recoge en vivo.
-  estado.landmarks = null;
-  if(window.detectarMano){
-    const im = new Image();
-    im.onload = async () => { try{ estado.landmarks = await window.detectarMano(im); }catch(e){} };
-    im.src = estado.dataUrl;
+  const dataUrl = cv.toDataURL('image/jpeg', 0.92);
+
+  // === FILTRO "SOLO MANOS" ===
+  // Antes de continuar, verificamos que la foto tenga una MANO. Si no la hay,
+  // NO avanzamos: pedimos otra foto. Si el modelo no cargó (sin red), no
+  // bloqueamos (no podemos verificar) para no dejar la app inservible.
+  verificando(true);
+  let r = { estado:'no-listo' };
+  if(window.escanearMano){ try{ r = await window.escanearMano(cv); }catch(e){} }
+  verificando(false);
+
+  if(r.estado === 'sin-mano'){
+    $('#err-camara').innerHTML =
+      'Solo puedo leer <b>manos</b> ✋. No detecté una palma en la foto: '
+      + 'acerca la mano, con buena luz y la palma bien abierta, e inténtalo de nuevo.';
+    return;   // seguimos en la cámara para reintentar al instante
   }
+
+  // Hay mano (o el modelo no cargó): guardamos y avanzamos.
+  estado.dataUrl = dataUrl;
+  estado.landmarks = (r.estado === 'mano') ? r.landmarks : null;   // ancla las líneas si la tenemos
+  $('#err-camara').textContent = '';
   detenerCamara();
   // Tras la foto, el usuario elige el ENFOQUE de su lectura (amor, dinero, ...).
   mostrar('tema');
@@ -1197,22 +1237,36 @@ function lineasDeLectura(a){
     lectura: tx(l.lectura) || b.lectura
   }; });
 }
-// Consejos de respaldo por tema (si el oráculo no devuelve ninguno, la tarjeta NUNCA queda vacía).
+// Consejos de respaldo por tema (POOL amplio). Si el oráculo no devuelve ninguno,
+// se eligen 3 AL AZAR del pool del tema → nunca salen "siempre los mismos".
 const CONSEJOS_BASE = {
-  amor:    ['Escucha de verdad y di lo que sientes.', 'No fuerces el amor: lo sincero llega a su tiempo.', 'Cuida los pequeños detalles del día a día.'],
-  dinero:  ['Ojo con lo que gastas: aparta un ahorro cada mes.', 'Antes de arriesgar, asegura lo básico.', 'Invierte en lo que de verdad conoces.'],
-  trabajo: ['Apuesta por aquello que se te da bien.', 'La constancia abre más puertas que la prisa.', 'Rodéate de quien te impulse a crecer.'],
-  familia: ['Dedica tiempo de calidad a los tuyos.', 'Perdona y comunica: los lazos se cuidan.', 'Tus raíces son tu mayor fortaleza.'],
-  salud:   ['Escucha a tu cuerpo y descansa lo suficiente.', 'Pequeños hábitos diarios lo cambian todo.', 'Cuida tu mente tanto como tu cuerpo.'],
-  '':      ['Confía en tu proceso y sé constante.', 'Escucha tu intuición, pero actúa con cabeza.', 'Lo mejor de tu mano aún está por escribirse.']
+  amor:    ['Escucha de verdad y di lo que sientes.', 'No fuerces el amor: lo sincero llega a su tiempo.', 'Cuida los pequeños detalles del día a día.', 'Perdona sin llevar la cuenta.', 'Da espacio y respeta el del otro.', 'Habla claro cuando algo te duela.', 'Rodéate de quien te trate bien.', 'Demuestra más y exige menos.'],
+  dinero:  ['Ojo con lo que gastas: aparta un ahorro cada mes.', 'Antes de arriesgar, asegura lo básico.', 'Invierte en lo que de verdad conoces.', 'Paga primero las deudas más caras.', 'No compares tu bolsillo con el de otros.', 'Aprende algo que suba tu valor.', 'Guarda para los imprevistos.', 'Gasta según tus metas, no tu ánimo.'],
+  trabajo: ['Apuesta por aquello que se te da bien.', 'La constancia abre más puertas que la prisa.', 'Rodéate de quien te impulse a crecer.', 'Pide ayuda cuando la necesites.', 'Termina lo que empiezas.', 'Cuida tu palabra: es tu reputación.', 'Descansa para rendir mejor.', 'Aprende de cada error sin castigarte.'],
+  familia: ['Dedica tiempo de calidad a los tuyos.', 'Perdona y comunica: los lazos se cuidan.', 'Tus raíces son tu mayor fortaleza.', 'Escucha antes de juzgar.', 'Celebra lo pequeño en familia.', 'Pon límites sanos con cariño.', 'Llama a quien hace tiempo no ves.', 'Da sin esperar nada a cambio.'],
+  salud:   ['Escucha a tu cuerpo y descansa lo suficiente.', 'Pequeños hábitos diarios lo cambian todo.', 'Cuida tu mente tanto como tu cuerpo.', 'Muévete un poco cada día.', 'Bebe agua y come con calma.', 'Duerme a tus horas.', 'Respira hondo cuando te agobies.', 'Pide ayuda si algo te pesa.'],
+  '':      ['Confía en tu proceso y sé constante.', 'Escucha tu intuición, pero actúa con cabeza.', 'Lo mejor de tu mano aún está por escribirse.', 'Da hoy un paso hacia lo que quieres.', 'Suelta lo que ya no te suma.', 'Agradece lo que ya tienes.', 'Sé amable contigo mismo.', 'Rodéate de quien te haga bien.']
 };
-// Consejos finales del oráculo (acepta arreglo o un solo texto; si no hay, usa el respaldo del tema).
+// Elige 3 al azar (Fisher-Yates) para variar el respaldo entre lecturas.
+function mezclar3(arr){
+  const a = arr.slice();
+  for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; }
+  return a.slice(0,3);
+}
+// Limpia basura de markdown que a veces cuela el modelo (**negrita**, #, guiones de lista).
+function limpiarConsejo(s){
+  return String(s||'').replace(/[*_#`]+/g,'').replace(/^\s*[-•·]\s*/,'').replace(/\s+/g,' ').trim();
+}
+// Consejos finales del oráculo: usa los de la IA si vienen (limpios); si no, 3 del pool
+// del tema, variados y memorizados en la lectura para que coincidan pantalla y correo.
 function consejosDe(a){
   const c = a && a.consejos;
   let arr = [];
-  if(Array.isArray(c)) arr = c.map(x => String(x||'').trim()).filter(Boolean);
-  else if(typeof c === 'string' && c.trim()) arr = [c.trim()];
-  return arr.length ? arr : (CONSEJOS_BASE[estado.tema || ''] || CONSEJOS_BASE['']);
+  if(Array.isArray(c)) arr = c.map(limpiarConsejo).filter(Boolean);
+  else if(typeof c === 'string' && c.trim()) arr = [limpiarConsejo(c)];
+  if(arr.length) return arr;
+  if(a){ if(!a._cons) a._cons = mezclar3(CONSEJOS_BASE[estado.tema || ''] || CONSEJOS_BASE['']); return a._cons; }
+  return mezclar3(CONSEJOS_BASE['']);
 }
 
 function renderResultado(){

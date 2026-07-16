@@ -14,7 +14,8 @@
   },
   "functions": {
     "source": "functions",
-    "runtime": "nodejs20"
+    "runtime": "nodejs20",
+    "predeploy": ["node functions/sync-guia.js"]
   },
   "firestore": {
     "rules": "firestore.rules",
