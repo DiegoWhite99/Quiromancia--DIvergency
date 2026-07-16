@@ -45,7 +45,13 @@ async function guardarLocal(doc, file) {
   await writeFile(ruta, JSON.stringify(arr, null, 2));
 }
 
+// Blindaje: un fallo de red (p. ej. ECONNRESET hacia OpenAI/ElevenLabs) NO debe
+// tumbar el servidor. Registramos y seguimos vivos.
+process.on('unhandledRejection', (e) => console.error('⚠ unhandledRejection:', (e && e.message) || e));
+process.on('uncaughtException', (e) => console.error('⚠ uncaughtException:', (e && e.message) || e));
+
 const server = createServer(async (req, res) => {
+ try {
   const url = new URL(req.url, `http://${req.headers.host}`);
   const ruta = url.pathname;
 
@@ -84,6 +90,11 @@ const server = createServer(async (req, res) => {
     if (['.html', '.js'].includes(extname(full))) res.setHeader('Cache-Control', 'no-store, must-revalidate');
     res.end(data);
   } catch { res.statusCode = 500; res.end('Error'); }
+ } catch (e) {
+  // Cualquier error de una petición se responde como 500 y el servidor SIGUE vivo.
+  console.error('dev-server error:', (e && e.message) || e);
+  try { if (!res.headersSent) enviar(res, 500, { error: 'Error interno del servidor de desarrollo.' }); else res.end(); } catch (_) {}
+ }
 });
 
 server.listen(PORT, () => {

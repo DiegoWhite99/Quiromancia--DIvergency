@@ -1086,10 +1086,10 @@ async function guardarImagen(fuente, w, h, espejo){
   verificando(false);
 
   if(r.estado === 'sin-mano'){
-    $('#err-camara').innerHTML =
-      '✋ <b>Eso no es una mano.</b> Solo puedo leer una <b>palma</b>: '
-      + 'muéstrala abierta, de frente, cerca de la cámara y con buena luz, e inténtalo de nuevo.';
-    return;   // seguimos en la cámara para reintentar al instante
+    // Alerta clara y visible (no un texto pequeño): no es una mano.
+    mostrarReintento('Lo que veo no parece una mano. Muestra tu palma abierta, de frente y con buena luz.',
+                     'Eso no es una mano ✋', '✋');
+    return;
   }
 
   // Hay mano (o el modelo no cargó). Si NO la pudimos verificar aquí (no-listo),
@@ -1139,9 +1139,10 @@ async function iniciarLectura(){
     estado.lectura = { error: e.message };
   }
   detenerCiclo();
-  // Segunda barrera del filtro "solo manos": si aquí no verificamos la mano (el
-  // detector local no cargó) y el oráculo confirma que NO es una mano, avisamos.
-  if(!estado.manoVerificada && estado.lectura && estado.lectura.noEsMano){
+  // El oráculo (backend) es la AUTORIDAD final sobre si hay una mano. Si dice que
+  // NO es una mano (cara, celular, objeto...), SIEMPRE mostramos la alerta, aunque
+  // el detector local se hubiera confundido. Así el aviso nunca se queda "suelto".
+  if(estado.lectura && estado.lectura.noEsMano){
     mostrarReintento('Lo que veo en la foto no parece una mano. Toma la foto a tu palma abierta, de frente.',
                      'Eso no es una mano ✋', '✋');
     return;
