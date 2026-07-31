@@ -8,14 +8,14 @@ fondo) y se le puede preguntar por **voz** o por texto. Al final, el usuario pue
 
 Pensada para desplegarse en **Firebase** (Hosting + Cloud Functions + Firestore + Auth).
 
-> Desarrollada por **Divergency**. Modelo experimental, solo para entretenimiento.
+> Desarrollada por la casa de software **Divergency IA**.
 
 ---
 
 ## ✨ Funcionalidades
 
 - **Intro** con estrella animada + audio (inicia al tocar).
-- **3 modos** de oráculo: 🎯 Serio · 🔮 Oráculo de Delfos · 😏 Burlón (sarcástico, sin grosería).
+- **Modo de lectura**: 🎯 Serio (directo y contundente).
 - **Formulario**: nombre, correo, celular, mano dominante, fecha de nacimiento (calcula el **signo** solo) y tema. Se guarda como *lead* en Firestore.
 - **Cámara** con tema de escaneo (estrellas + barrido) y respaldo a cámara nativa.
 - **Análisis** animado con IA (OpenAI `gpt-4o-mini` con visión).

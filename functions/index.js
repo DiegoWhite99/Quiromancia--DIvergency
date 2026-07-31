@@ -86,7 +86,7 @@ router.post('/enviar', async (req, res) => {
             <p style="color:#EBC878;letter-spacing:.3em;font-size:12px;text-transform:uppercase">Divergency · Quiromancia AI</p>
             <h2 style="color:#fff">Tu lectura, ${nombre}</h2>
             <div style="white-space:pre-wrap;line-height:1.6;font-family:Arial,sans-serif;font-size:15px">${String(prediccion).replace(/</g,'&lt;')}</div>
-            <p style="color:#A9A8D8;font-size:12px;margin-top:24px">Modelo experimental · Solo para entretenimiento.</p>
+            <p style="color:#A9A8D8;font-size:12px;margin-top:24px">Desarrollado por la casa de software Divergency IA.</p>
           </div>`;
         await transporter.sendMail({
           from: `"Divergency · Quiromancia" <${user}>`,
