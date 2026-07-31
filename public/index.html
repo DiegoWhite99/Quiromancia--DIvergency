@@ -277,6 +277,35 @@
     box-shadow:0 0 0 5px rgba(255,255,255,.18), 0 0 0 9px rgba(255,255,255,.08), 0 14px 30px -8px #000; transition:transform .12s; }
   .obturador:active{ transform:scale(.92); }
   .fila{ display:flex; gap:12px; width:100%; align-items:center; justify-content:center; }
+  /* Guía de encuadre en vivo: las esquinas y el obturador reaccionan a si la palma
+     llena el recuadro. Verde = listo para escanear; ámbar = acerca/centra. */
+  .visor .esquinas span{ transition:border-color .25s, box-shadow .25s; }
+  .visor.enc-sin .esquinas span{ border-color:rgba(255,255,255,.35); }
+  .visor.enc-lejos .esquinas span, .visor.enc-centro .esquinas span{ border-color:var(--oro); }
+  .visor.enc-ok .esquinas span{ border-color:#54E08A; box-shadow:0 0 14px rgba(84,224,138,.55); }
+  .obturador.listo{ box-shadow:0 0 0 5px rgba(84,224,138,.35), 0 0 0 10px rgba(84,224,138,.18), 0 0 22px 6px rgba(84,224,138,.5);
+    animation:obtListo 1.5s ease-in-out infinite; }
+  @keyframes obtListo{ 0%,100%{ transform:scale(1) } 50%{ transform:scale(1.06) } }
+  @keyframes encShake{ 0%,100%{ transform:translateX(0) } 20%{ transform:translateX(-9px) } 40%{ transform:translateX(8px) } 60%{ transform:translateX(-6px) } 80%{ transform:translateX(4px) } }
+  .visor.enc-shake{ animation:encShake .42s ease; }
+  /* Cuenta atrás de la foto automática. */
+  .auto-contador{ position:absolute; inset:0; z-index:4; display:none; align-items:center; justify-content:center;
+    font-family:var(--display); font-weight:900; font-size:clamp(90px,26vw,150px); color:#fff; pointer-events:none;
+    text-shadow:0 6px 30px rgba(84,224,138,.75), 0 0 22px rgba(0,0,0,.6); }
+  .auto-contador.on{ display:flex; animation:contPop .45s ease; }
+  @keyframes contPop{ from{ transform:scale(.55); opacity:.15 } to{ transform:scale(1); opacity:1 } }
+  /* Pie de la app: versión + medidas de la mano. Se muestra 5 s y se retira solo. */
+  #pie-version{ position:fixed; left:50%; bottom:max(env(safe-area-inset-bottom),12px); transform:translateX(-50%);
+    z-index:70; display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:4px 8px;
+    max-width:min(94vw,560px); padding:8px 15px; border-radius:16px; text-align:center;
+    font-size:11.5px; line-height:1.45; letter-spacing:.2px; color:var(--texto-mute);
+    background:rgba(6,8,20,.74); border:1px solid var(--card-borde);
+    backdrop-filter:blur(9px); -webkit-backdrop-filter:blur(9px);
+    box-shadow:0 12px 34px -16px #000; pointer-events:none;
+    opacity:0; visibility:hidden; transition:opacity .5s ease, visibility .5s ease; }
+  #pie-version.visible{ opacity:1; visibility:visible; }
+  #pie-version .pie-v{ color:var(--oro-suave); font-weight:600; white-space:nowrap; }
+  #pie-version .pie-sep{ opacity:.45; }
 
   /* ---------- Análisis ---------- */
   #pantalla-analisis{ align-items:center; text-align:center; gap:24px; }
@@ -565,17 +594,12 @@
       <div class="marca">Divergency</div>
       <h1 style="margin-top:14px">Quiromancia <em>AI</em></h1>
     </div>
-    <p class="sub mute">Elige la voz de tu oráculo. Luego capturaremos la palma de tu mano para comenzar la lectura.</p>
-
-    <div class="modos" id="sel-modo">
-      <button data-modo="serio" class="sel"><span class="mi"><svg viewBox="0 0 24 24"><use href="#ic-ojo"/></svg></span><b>Serio</b><small>Directo y contundente</small></button>
-      <button data-modo="burlon"><span class="mi"><svg viewBox="0 0 26 34"><use href="#ic-carta"/></svg></span><b>Burlón</b><small>Humor elocuente</small></button>
-    </div>
+    <p class="sub mute">Capturaremos la palma de tu mano para comenzar tu lectura.</p>
 
     <div style="width:100%; max-width:440px; margin-top:4px">
       <button class="btn oro" id="btn-tomar">📷 Tomar la foto de mi mano</button>
     </div>
-    <p class="nota">Modelo experimental · Solo para entretenimiento</p>
+    <p class="nota">Desarrollado por la casa de software Divergency IA</p>
   </section>
 
   <!-- ============ FORMULARIO ============ -->
@@ -644,7 +668,8 @@
         <div class="scan-beam"></div>
       </div>
       <div class="esquinas"><span></span><span></span><span></span><span></span></div>
-      <div class="hint" id="hint-camara">Encuadra la palma de tu mano y escanea</div>
+      <div id="auto-contador" class="auto-contador" aria-hidden="true"></div>
+      <div class="hint" id="hint-camara">La foto se toma sola al encuadrar la palma</div>
     </div>
     <div class="fila" style="margin-top:4px">
       <button class="btn fantasma" id="btn-cam-volver" style="width:auto; padding:16px 20px">←</button>
@@ -709,7 +734,7 @@
         <div class="marca" style="justify-content:flex-start">Divergency · Tu lectura</div>
         <div class="chat-nombre" id="res-nombre"></div>
         <div class="chips">
-          <span class="chip" id="chip-modo">Oráculo</span>
+          <span class="chip" id="chip-modo">Modo Serio</span>
           <span class="chip" id="chip-lectura"></span>
         </div>
       </div>
@@ -743,12 +768,20 @@
 
 </div>
 
+<!-- ============ PIE DE LA APP (versión + medidas de la mano) ============
+     Aviso discreto: aparece, se deja leer y se retira solo a los 5 segundos. -->
+<footer id="pie-version" aria-live="polite">
+  <span class="pie-v">Versión 1.3.1</span>
+  <span class="pie-sep">·</span>
+  <span class="pie-medidas" id="pie-medidas"></span>
+</footer>
+
 <!-- ============ MODAL DISCLAIMER ============ -->
 <div id="modal-disclaimer">
   <div class="glass modal-card">
     <div class="sello">⚠︎</div>
     <h2>Antes de revelar tu lectura</h2>
-    <p><b style="color:var(--oro-suave)">Quiromancia AI</b> es un <b>modelo experimental</b>. Su análisis puede contener <b>inconsistencias</b> o imprecisiones.</p>
+    <p><b style="color:var(--oro-suave)">Quiromancia AI</b> está <b>desarrollado por la casa de software Divergency IA</b>. Su análisis puede contener <b>inconsistencias</b> o imprecisiones.</p>
     <p>Esta lectura tiene fines de <b>entretenimiento y autorreflexión</b>. No es consejo médico, psicológico, legal ni financiero.</p>
     <div style="margin-top:22px">
       <button class="btn oro" id="btn-aceptar">Entiendo, comenzar la lectura</button>
@@ -866,7 +899,7 @@
    App web · home(modos) → formulario → cámara → análisis → chat
    ============================================================ */
 
-const MODOS_UI = { serio:'Modo Serio', mistico:'Oráculo de Delfos', burlon:'Modo Burlón' };
+const MODOS_UI = { serio:'Modo Serio', mistico:'Oráculo de Delfos' };
 // Color por significado de la línea
 const PALETA = { verde:'#54E08A', azul:'#5B9BFF', rosa:'#FF6FB5', dorado:'#EBC878', morado:'#B083FF', rojo:'#FF6B6B' };
 
@@ -874,6 +907,9 @@ const estado = {
   modo:'serio', nombre:'', correo:'', cel:'', mano:'derecha', fecha:'', anio:'', tema:'', signo:'', flipManual:false, mirror:false,
   dataUrl:'', stream:null, lectura:null, tts:true, landmarks:null
 };
+
+/* Versión que muestra el pie de la app. */
+const VERSION_APP = '1.3.1';
 
 const $ = (s) => document.querySelector(s);
 const pantallas = {
@@ -909,13 +945,8 @@ async function postJSON(url, body){
   return data;
 }
 
-/* ====================== HOME / MODOS ====================== */
-$('#sel-modo').addEventListener('click', (e) => {
-  const b = e.target.closest('button'); if(!b) return;
-  [...$('#sel-modo').children].forEach(x => x.classList.remove('sel'));
-  b.classList.add('sel');
-  estado.modo = b.dataset.modo;
-});
+/* ====================== HOME ====================== */
+// Modo único: "Serio". (Se retiró el selector de modos y el modo Burlón.)
 $('#btn-tomar').addEventListener('click', () => mostrar('form'));
 
 /* ====================== FORMULARIO ====================== */
@@ -953,7 +984,9 @@ $('#in-fecha').addEventListener('change', () => {
 /* ---------- Límite de 3 lecturas por usuario (correo) ---------- */
 const LECT_KEY = 'divergency_lecturas';
 function mapaLecturas(){ try{ return JSON.parse(localStorage.getItem(LECT_KEY) || '{}'); }catch(e){ return {}; } }
-function lecturasDe(correo){ return mapaLecturas()[correo.toLowerCase()] || 0; }
+function lecturasDe(correo){
+  return mapaLecturas()[correo.toLowerCase()] || 0;
+}
 function registrarLectura(correo){
   if(!correo) return;
   const m = mapaLecturas(); const k = correo.toLowerCase();
@@ -968,6 +1001,34 @@ function actualizarNotaLecturas(){
   } else el.textContent = '';
 }
 $('#in-correo').addEventListener('input', actualizarNotaLecturas);
+
+/* ---------- Pie de la app: versión + medidas de la mano ----------
+   Un solo aviso discreto abajo. Aparece con un fundido, se deja leer y se retira
+   solo a los 5 segundos (nunca queda tapando la lectura). Se usa dos veces:
+   al abrir la app (versión) y al terminar el análisis (medidas de esa mano). */
+const PIE_MS = 5000;
+const PIE_TEXTO_INICIAL = 'tu lectura se calcula con las medidas reales de tu mano';
+let pieTimerOcultar = null, pieTimerAparecer = null;
+
+function mostrarPie(detalle){
+  const pie = $('#pie-version'); if(!pie) return;
+  pie.querySelector('.pie-v').textContent = 'Versión ' + VERSION_APP;
+  $('#pie-medidas').textContent = detalle || PIE_TEXTO_INICIAL;
+  clearTimeout(pieTimerOcultar); clearTimeout(pieTimerAparecer);
+  pie.classList.add('visible');
+  pieTimerOcultar = setTimeout(() => pie.classList.remove('visible'), PIE_MS);
+}
+
+/* Resumen corto de las medidas que MediaPipe midió en esta mano concreta.
+   Las cifras crudas se calculan en el backend (functions/handlers.js → medidasDeMano). */
+function resumenMedidas(m){
+  if(!m) return '';
+  return `medidas de tu mano · palma ${m.aspecto} · dedo medio ${Math.round(m.medioRel * 100)}%`
+       + ` · índice/anular ${m.indVsAnu} · pulgar ${m.angPulgar}° · dedos ${m.sep}`;
+}
+
+// Al abrir: muestra la versión un momento y se va.
+pieTimerAparecer = setTimeout(() => mostrarPie(), 700);
 
 $('#btn-a-camara').addEventListener('click', () => {
   const nombre = $('#in-nombre').value.trim();
@@ -1031,6 +1092,9 @@ async function iniciarCamara(){
     video.style.transform = estado.mirror ? 'scaleX(-1)' : 'none';
     video.srcObject = estado.stream; video.style.display='block';
     await video.play().catch(()=>{});
+    estado.encuadreOK=false; estado.detectorVivo=false; _autoDesde=0; _capturando=false;
+    setEncuadre('sin','Muestra la palma; se captura sola al encuadrar ✨', false);
+    bucleEncuadre();                              // guía de encuadre en vivo + foto automática
   }catch(err){ sinCamaraEnVivo(); }
 }
 function sinCamaraEnVivo(){
@@ -1038,7 +1102,79 @@ function sinCamaraEnVivo(){
   $('#hint-camara').textContent = 'Toca el botón para abrir la cámara';
   $('#err-camara').innerHTML = 'Cámara en vivo no disponible. Usa el obturador o el botón 🖼️ para tomar la foto con la cámara nativa.';
 }
-function detenerCamara(){ if(estado.stream){ estado.stream.getTracks().forEach(t=>t.stop()); estado.stream=null; } }
+function detenerCamara(){
+  _encToken++;                                   // corta el bucle de encuadre
+  if(estado.stream){ estado.stream.getTracks().forEach(t=>t.stop()); estado.stream=null; }
+  const v=$('#visor'), o=$('#btn-disparar');
+  if(v) v.className='visor';                     // limpia las clases de encuadre
+  if(o) o.classList.remove('listo');
+  estado.encuadreOK=false; estado.detectorVivo=false;
+  _autoDesde=0; _capturando=false; ocultarContador();
+}
+
+/* ---------- GUÍA DE ENCUADRE EN VIVO ----------
+   Mientras la cámara está activa, medimos varias veces por segundo si hay una palma
+   y si LLENA el recuadro. Damos feedback (esquinas verdes + texto) y NO dejamos
+   disparar hasta que el encuadre sea bueno. Si el detector no está disponible
+   (sin red), no bloqueamos: se puede disparar igual. */
+let _encToken = 0, _autoDesde = 0, _capturando = false;
+const ENC_MIN = 0.58;    // la mano debe ocupar ≥58% del lado mayor del recuadro
+const AUTO_MS = 2000;    // tiempo que la palma debe mantenerse bien encuadrada antes de disparar
+// Contador de la foto automática.
+function mostrarContador(n){
+  const c=$('#auto-contador'); if(!c) return;
+  if(c.textContent !== String(n)){ c.textContent = n; c.classList.remove('on'); void c.offsetWidth; }
+  c.classList.add('on');
+}
+function ocultarContador(){ const c=$('#auto-contador'); if(c){ c.classList.remove('on'); c.textContent=''; } }
+function resetAuto(){ _autoDesde=0; ocultarContador(); }
+function dispararAuto(){
+  if(_capturando) return;
+  _capturando = true; _encToken++;   // corta el bucle: no más ticks mientras se procesa
+  resetAuto();
+  $('#hint-camara').textContent = '📸 ¡Capturada!';
+  capturarDeVideo();                 // toma la foto del video en vivo
+}
+function setEncuadre(clase, texto, listo){
+  const v=$('#visor'); if(v) v.className = 'visor enc-' + clase;
+  $('#hint-camara').textContent = texto;
+  const o=$('#btn-disparar'); if(o) o.classList.toggle('listo', !!listo);
+}
+function evaluarEncuadre(lm){
+  if(!lm){ estado.encuadreOK=false; resetAuto(); setEncuadre('sin','Muestra la palma abierta, de frente ✋', false); return; }
+  let minX=1,maxX=0,minY=1,maxY=0;
+  for(const p of lm){ if(p.x<minX)minX=p.x; if(p.x>maxX)maxX=p.x; if(p.y<minY)minY=p.y; if(p.y>maxY)maxY=p.y; }
+  const tam=Math.max(maxX-minX, maxY-minY), cx=(minX+maxX)/2, cy=(minY+maxY)/2;
+  const centrada = cx>0.26 && cx<0.74 && cy>0.22 && cy<0.78;
+  if(tam < ENC_MIN){ estado.encuadreOK=false; resetAuto(); setEncuadre('lejos','Acerca la mano hasta llenar el recuadro ✋', false); return; }
+  if(!centrada){ estado.encuadreOK=false; resetAuto(); setEncuadre('centro','Centra la palma en el recuadro', false); return; }
+  // Encuadre bueno: si se MANTIENE estable AUTO_MS, la foto se toma sola (cuenta atrás).
+  estado.encuadreOK=true;
+  if(!_autoDesde) _autoDesde = performance.now();
+  const restante = AUTO_MS - (performance.now() - _autoDesde);
+  if(restante <= 0){ dispararAuto(); return; }
+  setEncuadre('ok','✓ ¡No te muevas! Capturando…', true);
+  mostrarContador(Math.ceil(restante / (AUTO_MS/3)));   // 3 → 2 → 1
+}
+async function bucleEncuadre(){
+  const miToken = ++_encToken;
+  const video=$('#video'), cv=document.createElement('canvas'), ctx=cv.getContext('2d');
+  const paso = async () => {
+    if(miToken!==_encToken || !estado.stream) return;    // cámara detenida → corta
+    if(video.videoWidth && window.escanearMano){
+      const s = 260/Math.max(video.videoWidth, video.videoHeight);
+      cv.width=Math.round(video.videoWidth*s); cv.height=Math.round(video.videoHeight*s);
+      ctx.drawImage(video,0,0,cv.width,cv.height);
+      let r={estado:'no-listo'};
+      try{ r = await window.escanearMano(cv); }catch(e){}
+      if(miToken!==_encToken) return;
+      if(r.estado==='no-listo'){ estado.detectorVivo=false; setEncuadre('sin','Encuadra la palma de tu mano y escanea', false); }
+      else { estado.detectorVivo=true; evaluarEncuadre(r.estado==='mano' ? r.landmarks : null); }
+    }
+    if(miToken===_encToken) setTimeout(paso, 300);
+  };
+  paso();
+}
 
 $('#btn-disparar').addEventListener('click', () => { estado.stream ? capturarDeVideo() : $('#file-input').click(); });
 $('#btn-galeria').addEventListener('click', () => $('#file-input').click());
@@ -1047,6 +1183,14 @@ $('#btn-cam-volver').addEventListener('click', () => { detenerCamara(); mostrar(
 function capturarDeVideo(){
   const video = $('#video');
   if(!video.videoWidth){ $('#err-camara').textContent='La cámara aún no está lista, intenta de nuevo.'; return; }
+  // Solo bloqueamos si el detector SÍ funciona y el encuadre aún no es bueno.
+  // (Si no hay detector —sin red—, dejamos disparar para no trabar la app.)
+  if(estado.detectorVivo && !estado.encuadreOK){
+    $('#err-camara').textContent = 'Acerca y centra la palma hasta que el marco se ponga verde ✓, luego escanea.';
+    const v=$('#visor'); if(v){ v.classList.remove('enc-shake'); void v.offsetWidth; v.classList.add('enc-shake'); }
+    return;
+  }
+  $('#err-camara').textContent = '';
   guardarImagen(video, video.videoWidth, video.videoHeight, estado.mirror);
 }
 $('#file-input').addEventListener('change', (e) => {
@@ -1126,11 +1270,15 @@ async function iniciarLectura(){
   $('#img-analisis').src = estado.dataUrl;
   cicloEstados();
   try{
-    const { lectura } = await postJSON('/api/lectura', {
+    const resp = await postJSON('/api/lectura', {
       modo:estado.modo, nombre:estado.nombre, mano:estado.mano, tema:estado.tema,
-      fecha:estado.fecha, anio:estado.anio, signo:estado.signo, dataUrl:estado.dataUrl
+      fecha:estado.fecha, anio:estado.anio, signo:estado.signo, dataUrl:estado.dataUrl,
+      // 21 puntos de la mano (MediaPipe): medidas reales y únicas → lecturas distintas.
+      landmarks:estado.landmarks
     });
-    estado.lectura = lectura || {};
+    estado.lectura = resp.lectura || {};
+    // Pie: las medidas reales de esta mano, 5 segundos y se va.
+    if(resp.metricas) mostrarPie(resumenMedidas(resp.metricas));
   }catch(e){
     estado.lectura = { error: e.message };
   }
@@ -1676,7 +1824,7 @@ function hablarNavegador(texto, alTerminar){
     speechSynthesis.cancel();
     const u=new SpeechSynthesisUtterance(texto);
     u.lang='es-ES'; u.rate=0.96;
-    u.pitch = estado.modo==='mistico'?0.9 : estado.modo==='burlon'?1.1 : 1.0;
+    u.pitch = estado.modo==='mistico'?0.9 : 1.0;
     if(typeof alTerminar === 'function') u.onend = alTerminar;
     speechSynthesis.speak(u);
   }catch(e){ if(typeof alTerminar === 'function') alTerminar(); }

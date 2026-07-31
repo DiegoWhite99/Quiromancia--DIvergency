@@ -9,25 +9,34 @@ const path = require('path');
 // del libro base, para REFORZAR las lecturas. La guía ya es 100% interpretativa
 // (tipos de mano, dedos, montes, líneas mayores/menores y marcas): se usa completa;
 // solo se normaliza y se limita el tamaño para mantener el prompt ligero.
+// Busca un archivo de docs probando varias ubicaciones (dev, Cloud Functions, cwd).
+function leerDoc(nombre) {
+  const bases = [
+    path.join(__dirname, '..', 'public', 'docs'),
+    __dirname,
+    path.join(process.cwd(), 'public', 'docs')
+  ];
+  for (const b of bases) {
+    try { const p = path.join(b, nombre); if (fs.existsSync(p)) return fs.readFileSync(p, 'utf8'); } catch (e) {}
+  }
+  return '';
+}
 let _guiaCache = null;
 function guiaTratado() {
   if (_guiaCache !== null) return _guiaCache;
-  const candidatos = [
-    path.join(__dirname, '..', 'public', 'docs', 'quiromancia.txt'),
-    path.join(__dirname, 'quiromancia.txt'),
-    path.join(process.cwd(), 'public', 'docs', 'quiromancia.txt')
-  ];
-  let txt = '';
-  for (const p of candidatos) {
-    try { if (fs.existsSync(p)) { txt = fs.readFileSync(p, 'utf8'); break; } } catch (e) {}
+  const norm = (s) => (s || '').replace(/\r/g, '').replace(/\n{3,}/g, '\n\n').trim();
+  const destilada = norm(leerDoc('quiromancia.txt'));                    // guía curada (limpia)
+  const completa  = norm(leerDoc('quiromancia-anonimo-backup.txt'));     // libro completo (más profundidad)
+  // La guía DESTILADA va primero (es la esencia interpretativa, limpia y priorizada);
+  // debajo se anexa el LIBRO COMPLETO para más profundidad y vocabulario variado.
+  // Presupuesto configurable con GUIA_MAX (por defecto ~55k caracteres ≈ 14k tokens).
+  const MAX = Math.max(20000, parseInt(process.env.GUIA_MAX, 10) || 55000);
+  let txt = destilada;
+  if (completa && completa !== destilada) {
+    const resto = MAX - txt.length - 220;
+    if (resto > 1000) txt += '\n\n=== LIBRO COMPLETO (referencia extendida) ===\n\n' + completa.slice(0, resto);
   }
-  if (txt) {
-    // La guía ya es toda interpretativa: se usa completa. Solo normalizamos y
-    // limitamos el tamaño para mantener el prompt ligero (peticiones más rápidas).
-    txt = txt.replace(/\r/g, '').replace(/\n{3,}/g, '\n\n').trim();
-    const MAX = 20000;   // ~5k tokens: la guía destilada (~13 KB) entra completa
-    if (txt.length > MAX) txt = txt.slice(0, MAX);
-  }
+  if (txt.length > MAX) txt = txt.slice(0, MAX);
   _guiaCache = txt;
   return _guiaCache;
 }
@@ -78,11 +87,6 @@ const MODOS = {
     temperatura: 0.9,
     personalidad:
       'PERSONALIDAD: Eres el Oráculo de Delfos encarnado, la Pitia que profetiza entre los vapores sagrados del templo de Apolo. Hablas en un lenguaje solemne, poético y evocador, pero tus predicciones siguen siendo claras y afirmativas.'
-  },
-  burlon: {
-    temperatura: 1.0,
-    personalidad:
-      'PERSONALIDAD: Eres un quiromante con humor ácido, sarcástico e ingeniosísimo, al estilo de Deadpool y de Ricardo Quevedo: irreverente, con timing cómico, pullas y ocurrencias. Te burlas con cariño, pero JAMÁS insultas ni eres grosero; cada broma esconde una observación real y cierras con calidez.'
   }
 };
 
@@ -193,6 +197,69 @@ function etapaVida(edad) {
   return 'mayor (con la sabiduría de una vida vivida)';
 }
 
+// MEDIDAS OBJETIVAS de la mano a partir de los 21 puntos de MediaPipe que detecta el
+// navegador (índices estándar: 0=muñeca, 4=punta pulgar, 5/9/13/17=nudillos de
+// índice/medio/anular/meñique, 8/12/16/20=yemas). Son datos REALES y ÚNICOS de cada
+// mano: se los pasamos al modelo para que su lectura de la FORMA y los DEDOS derive de
+// ESTA foto concreta (dos personas → medidas distintas → lecturas distintas) en vez de
+// caer en descripciones genéricas. Devuelve '' si no hay puntos válidos.
+// Umbrales de clasificación (forma de la palma, largo de dedos, pulgar, separación).
+// Son AFINABLES: la app en desarrollo muestra las cifras crudas (metricas) de cada
+// mano en pantalla y consola para poder calibrarlos con fotos reales. Se pueden
+// sobreescribir con la env UMBRALES_MANO (JSON) sin tocar el código.
+const UMBRALES_MANO = (() => {
+  const base = {
+    aspCuadrada: 0.85, aspEquilibrada: 0.72,   // ancho/largo de la palma
+    dedosLargos: 0.92, dedosMedios: 0.80,       // dedo medio / largo de palma
+    pulgarAbierto: 50, pulgarMedio: 35,         // grados de apertura del pulgar
+    sepMucha: 0.55, sepAlgo: 0.38               // separación de yemas / ancho de palma
+  };
+  try { return Object.assign(base, JSON.parse(process.env.UMBRALES_MANO || '{}')); }
+  catch (e) { return base; }
+})();
+
+function medidasDeMano(landmarks) {
+  if (!Array.isArray(landmarks) || landmarks.length < 21) return null;
+  const P = landmarks;
+  if (!P.every(p => p && isFinite(p.x) && isFinite(p.y))) return null;
+  const d = (a, b) => Math.hypot(P[a].x - P[b].x, P[a].y - P[b].y);
+  const palmLen = d(0, 9);          // muñeca → base del dedo medio (largo de la palma)
+  const palmWid = d(5, 17);         // base del índice → base del meñique (ancho)
+  if (!(palmLen > 0) || !(palmWid > 0)) return null;
+  const fInd = d(5, 8), fMed = d(9, 12), fAnu = d(13, 16);
+  // Ángulo de apertura del pulgar (entre el pulgar y el índice), en grados.
+  const ang = (a, b, c) => {
+    const x1 = P[a].x - P[b].x, y1 = P[a].y - P[b].y;
+    const x2 = P[c].x - P[b].x, y2 = P[c].y - P[b].y;
+    const m = Math.hypot(x1, y1) * Math.hypot(x2, y2) || 1;
+    return Math.round(Math.acos(Math.max(-1, Math.min(1, (x1 * x2 + y1 * y2) / m))) * 180 / Math.PI);
+  };
+  // Cifras crudas (para calibrar los umbrales con fotos reales).
+  const metricas = {
+    aspecto: +(palmWid / palmLen).toFixed(3),   // ancho/largo de la palma
+    medioRel: +(fMed / palmLen).toFixed(3),      // dedo medio / largo de palma
+    indVsAnu: +(fInd / fAnu).toFixed(3),         // índice / anular
+    angPulgar: ang(4, 2, 5),                     // apertura del pulgar (°)
+    sep: +(((d(8, 12) + d(12, 16) + d(16, 20)) / 3) / palmWid).toFixed(3) // separación de yemas
+  };
+  const U = UMBRALES_MANO, m = metricas;
+  const forma = m.aspecto >= U.aspCuadrada ? 'cuadrada (ancho parecido al largo → práctica y metódica)'
+    : m.aspecto >= U.aspEquilibrada ? 'equilibrada (algo más larga que ancha)'
+    : 'alargada (claramente más larga que ancha → sensible e imaginativa)';
+  const largo = m.medioRel >= U.dedosLargos ? 'largos (mente detallista y reflexiva)'
+    : m.medioRel >= U.dedosMedios ? 'de largo medio' : 'cortos (mente rápida y práctica)';
+  const iVsA = m.indVsAnu >= 1.03 ? 'el índice es más largo que el anular (liderazgo, orgullo)'
+    : m.indVsAnu <= 0.97 ? 'el anular es más largo que el índice (creatividad, gusto por el riesgo)'
+    : 'índice y anular casi iguales (carácter equilibrado)';
+  const pulgar = m.angPulgar >= U.pulgarAbierto ? 'muy abierto (independiente y seguro)'
+    : m.angPulgar >= U.pulgarMedio ? 'de apertura media' : 'cerrado (prudente y reservado)';
+  const separacion = m.sep >= U.sepMucha ? 'los dedos MUY separados (persona abierta, espontánea)'
+    : m.sep >= U.sepAlgo ? 'los dedos algo separados' : 'los dedos juntos (cautela, control, reserva)';
+
+  const texto = `palma ${forma}; dedos ${largo} (el dedo medio mide ≈ ${Math.round(m.medioRel * 100)}% del largo de la palma); ${iVsA}; pulgar ${pulgar} (apertura ≈ ${m.angPulgar}°); ${separacion}; proporción ancho/largo de la palma ≈ ${m.aspecto.toFixed(2)}`;
+  return { texto, metricas };
+}
+
 // Lectura estructurada de la palma (una sola llamada, devuelve JSON por líneas).
 async function handleLectura(body) {
   if (!apiKey()) return { status: 500, data: { error: 'Falta OPENAI_API_KEY en el servidor.' } };
@@ -223,10 +290,18 @@ async function handleLectura(body) {
   const enfoque = temaTxt
     ? ` TEMA ELEGIDO: ${temaTxt}. ESTO ES LO MÁS IMPORTANTE: la lectura DEBE girar en torno a ${temaTxt}. Interpreta CADA una de las 4 líneas conectándola con ese tema así → ${ENFOQUE_LINEAS[temaKey]} La "lectura" de CADA línea TIENE QUE mencionar EXPLÍCITAMENTE ${temaTxt} (no de forma genérica), y TODOS los "consejos" deben ser sobre ${temaTxt}. Si una lectura no habla del tema, está MAL.`
     : ` La persona quiere una visión GENERAL: reparte el enfoque entre vitalidad, amor, mente y destino, con consejos generales para la vida.`;
+  // Medidas objetivas de ESTA mano (de los 21 puntos de MediaPipe). Son reales y
+  // únicas de cada persona: obligan al modelo a diferenciar la lectura de verdad.
+  const md = medidasDeMano(body.landmarks);
+  const bloqueMedidas = md
+    ? ` MEDIDAS REALES DE ESTA MANO (calculadas automáticamente sobre la foto con un detector de 21 puntos; son OBJETIVAS y ÚNICAS de esta persona — apóyate en ellas y NO las contradigas): ${md.texto}.`
+      + ` Basa en estas medidas la descripción de la FORMA de la mano y los dedos (campo "montes") y matiza con ellas cada línea. Como estas cifras cambian de una persona a otra, tu lectura TAMBIÉN debe cambiar: PROHIBIDO dar una lectura que le sirva a cualquiera.`
+    : '';
   const intro = `Persona: ${body.nombre || 'anónima'}.`
     + ` Mano fotografiada: ${manoTxt}.`
     + (edad != null ? ` Edad aproximada: ${edad} años — ${etapaVida(edad)}.` : '')
     + enfoque
+    + bloqueMedidas
     + ` Analiza con detalle ESTA fotografía de la palma siguiendo el protocolo de observación: mide la forma de la mano y los dedos, sigue el recorrido REAL de cada línea y devuelve sus "puntos" sobre la foto. Haz una lectura ÚNICA y PERSONAL —usa su nombre y su etapa de vida— basada en lo que de verdad ves aquí (otra persona debe recibir una lectura distinta). Responde en formato JSON.`;
 
   const cuerpo = {
@@ -290,7 +365,13 @@ async function handleLectura(body) {
   }
   // Siempre 200 con una lectura (real, parcial o vacía → el front la completa).
   // Limpiamos la jerga de "montes"/planetas por si el modelo se coló.
-  return { status: 200, data: { lectura: limpiarLectura(lectura) || {} } };
+  // Adjuntamos las medidas de la mano: la app en desarrollo las muestra para
+  // poder AFINAR los umbrales con fotos reales.
+  return { status: 200, data: {
+    lectura: limpiarLectura(lectura) || {},
+    medidas: md ? md.texto : '',
+    metricas: md ? md.metricas : null
+  } };
 }
 
 async function handleTranscribe(body) {
@@ -373,4 +454,4 @@ function leadDoc(body) {
   };
 }
 
-module.exports = { MODELO, MODOS, construirSystemLectura, handleLectura, handleTranscribe, handleVoz, handleVoces, leadDoc };
+module.exports = { MODELO, MODOS, construirSystemLectura, medidasDeMano, handleLectura, handleTranscribe, handleVoz, handleVoces, leadDoc };

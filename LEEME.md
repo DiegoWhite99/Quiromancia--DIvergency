@@ -5,17 +5,17 @@ elección de oráculo (3 modos), formulario con datos del usuario, cámara con t
 escaneo, animación de análisis, y un **chat** donde el oráculo entrega la lectura (con
 música de fondo suave) y se puede preguntar por **voz** (micrófono) o por texto.
 
-> Desarrollada por **Divergency**. Modelo experimental, solo para entretenimiento.
+> Desarrollada por la casa de software **Divergency IA**.
 
 ---
 
 ## Qué hace
 
 - **Intro**: estrella animada + audio (`mp3/yodguard-healing-magic-5-378667.mp3`); inicia al tocar.
-- **3 modos**: 🎯 Serio · 🔮 Oráculo (Delfos) · 😏 Burlón (sarcástico estilo Deadpool / Ricardo Quevedo, sin grosería).
+- **Modo de lectura**: 🎯 Serio (directo y contundente). *(Se retiró el selector de modos y el modo Burlón.)*
 - **Formulario**: nombre, correo, celular, mano dominante, fecha de nacimiento (saca el signo solo) y tema. Los datos se guardan como **lead** en Firestore.
 - **Cámara**: tema de escaneo (estrellas + barrido), sin silueta de mano.
-- **Lectura**: análisis animado → aviso experimental → chat con la lectura, **música de fondo suave** (`mp3/dragon.mp3`) y voz del oráculo (TTS).
+- **Lectura**: análisis animado → aviso previo → chat con la lectura, **música de fondo suave** (`mp3/dragon.mp3`) y voz del oráculo (TTS).
 - **Límite de 3 lecturas por usuario** (por correo), con indicador “Lectura X/3”.
 - **Al terminar**: alerta “¿Deseas recibir tu predicción?” → **iniciar sesión con Google** → se envía la lectura al **correo**.
 
