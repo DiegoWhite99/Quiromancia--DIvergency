@@ -30,7 +30,7 @@ escucha su lectura y la recibe en su WhatsApp.
 > ### 🟢 Versión estable
 >
 > **`1.4.0` es la versión estable actual del proyecto.** Está en `main`, replicada en la
-> rama `despliegue` y etiquetada como **`v1.4.0`** en el repositorio.
+> rama `despliegue` y etiquetada como **`1.4.0`** en el repositorio.
 > Es la versión recomendada para llevar la máquina a un evento.
 >
 > El detalle de lo que trae cada versión está en **[CHANGELOG.md](CHANGELOG.md)**.
