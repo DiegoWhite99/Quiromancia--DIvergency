@@ -27,7 +27,9 @@ música de fondo suave) y se puede preguntar por **voz** (micrófono) o por text
 quiromancia/
 ├─ public/                  # Firebase Hosting (frontend)
 │  ├─ index.html
-│  └─ mp3/  (intro + dragon.mp3)
+│  ├─ img/   (logo, estrella, icono.svg = icono de la app)
+│  ├─ mp3/   (intro + dragon.mp3)
+│  └─ video/ (tutorial-maquina.mp4 = instructivo de la portada)
 ├─ functions/               # Cloud Functions (backend)
 │  ├─ index.js              # API: /chat /transcribe /lead /enviar
 │  ├─ handlers.js           # lógica compartida (OpenAI, leads)
@@ -107,6 +109,11 @@ Al terminar te da la URL `https://TU-PROJECT-ID.web.app`. Ábrela en el iPad y, 
 
 - **Tono / modelo**: `functions/handlers.js` → objeto `MODOS` (personalidad y temperatura) y `MODELO` (`gpt-4o-mini`).
 - **Diseño, textos, audios**: `public/index.html` (variables CSS en `:root`) y carpeta `public/mp3/`.
+- **Instructivo del inicio**: el video es `public/video/tutorial-maquina.mp4` (mudo, apaisado). Para
+  cambiarlo, reemplaza el archivo con ese mismo nombre. Los cuatro pasos escritos y el momento en
+  que se encienden están en `index.html`, bloque `TUTORIAL` (constante `TUTO_MARCAS`, en fracciones
+  del video, así siguen cuadrando aunque el nuevo video dure otra cosa).
+- **Icono de la app** (pestaña y pantalla de inicio): `public/img/icono.svg`.
 - **Volumen de la música de fondo**: en `index.html`, función `fondoMusica` (`bg.volume = 0.14`).
 
 ---
