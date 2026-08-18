@@ -6,7 +6,7 @@
 
 import { createServer } from 'node:http';
 import { readFile, writeFile } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
+import { existsSync, statSync, createReadStream } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, extname } from 'node:path';
 import { createRequire } from 'node:module';
@@ -29,7 +29,8 @@ if (existsSync(join(__dirname, '.env'))) {
 
 const TIPOS = { '.html':'text/html', '.js':'text/javascript', '.css':'text/css', '.svg':'image/svg+xml',
   '.json':'application/json', '.mp3':'audio/mpeg', '.wav':'audio/wav', '.m4a':'audio/mp4',
-  '.png':'image/png', '.jpg':'image/jpeg', '.jpeg':'image/jpeg', '.ico':'image/x-icon' };
+  '.png':'image/png', '.jpg':'image/jpeg', '.jpeg':'image/jpeg', '.ico':'image/x-icon',
+  '.mp4':'video/mp4', '.webm':'video/webm', '.mov':'video/quicktime', '.webp':'image/webp' };
 
 function enviar(res, status, obj) {
   res.statusCode = status;
@@ -82,12 +83,37 @@ const server = createServer(async (req, res) => {
   const archivo = ruta === '/' ? '/index.html' : ruta;
   const full = join(PUBLIC, archivo);
   if (!full.startsWith(PUBLIC) || !existsSync(full)) { res.statusCode = 404; return res.end('No encontrado'); }
+  const ext = extname(full);
+  // El <video> del tutorial pide el archivo por trozos (cabecera Range). Sin
+  // esto, algunos navegadores (Safari/iOS) se niegan a reproducirlo.
+  if (['.mp4', '.webm', '.mov'].includes(ext)) {
+    try {
+      const total = statSync(full).size;
+      const rango = /^bytes=([0-9]*)-([0-9]*)$/.exec(req.headers.range || '');
+      res.setHeader('content-type', TIPOS[ext]);
+      res.setHeader('accept-ranges', 'bytes');
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+      if (rango) {
+        const ini = rango[1] ? parseInt(rango[1], 10) : 0;
+        const fin = rango[2] ? Math.min(parseInt(rango[2], 10), total - 1) : total - 1;
+        if (isNaN(ini) || ini > fin || ini >= total) {
+          res.statusCode = 416; res.setHeader('content-range', `bytes */${total}`); return res.end();
+        }
+        res.statusCode = 206;
+        res.setHeader('content-range', `bytes ${ini}-${fin}/${total}`);
+        res.setHeader('content-length', fin - ini + 1);
+        return createReadStream(full, { start: ini, end: fin }).pipe(res);
+      }
+      res.setHeader('content-length', total);
+      return createReadStream(full).pipe(res);
+    } catch { res.statusCode = 500; return res.end('Error'); }
+  }
   try {
     const data = await readFile(full);
-    res.setHeader('content-type', TIPOS[extname(full)] || 'application/octet-stream');
+    res.setHeader('content-type', TIPOS[ext] || 'application/octet-stream');
     // En desarrollo NO cacheamos el HTML/JS: así el navegador siempre carga la
     // última versión y no hace falta el "refresco forzado" tras cada cambio.
-    if (['.html', '.js'].includes(extname(full))) res.setHeader('Cache-Control', 'no-store, must-revalidate');
+    if (['.html', '.js'].includes(ext)) res.setHeader('Cache-Control', 'no-store, must-revalidate');
     res.end(data);
   } catch { res.statusCode = 500; res.end('Error'); }
  } catch (e) {

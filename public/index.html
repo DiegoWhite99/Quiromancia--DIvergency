@@ -9,7 +9,9 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="Quiromancia" />
 <meta name="theme-color" content="#0D0D6B" />
-<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='40' fill='%230D0D6B'/%3E%3Cpath d='M90 40c-6 0-10 5-10 12v34l-6-6c-4-4-11-4-15 0-3 4-3 9 0 13l24 28c5 6 12 9 20 9 15 0 27-12 27-27V64c0-6-5-11-11-11s-11 5-11 11v-2c0-6-5-11-11-11s-11 5-11 11v-9c0-7-4-12-10-12z' fill='none' stroke='%23EBC878' stroke-width='4' stroke-linejoin='round'/%3E%3Ccircle cx='118' cy='52' r='3' fill='%23EBC878'/%3E%3C/svg%3E" />
+<!-- Icono de la app (pestaña, escritorio y pantalla de inicio): bola de cristal. -->
+<link rel="icon" type="image/svg+xml" href="img/icono.svg" />
+<link rel="apple-touch-icon" href="img/icono.svg" />
 
 <title>Quiromancia · Divergency</title>
 
@@ -182,6 +184,122 @@
   #pantalla-home h1 em{ font-style:italic; color:var(--oro); }
   .sub{ font-size:16px; line-height:1.6; max-width:440px; }
 
+  /* ---------- TUTORIAL (cómo usar la máquina) ----------
+     Pantalla que ve TODA persona al entrar: video de 15 s de la máquina en uso
+     + los 4 pasos del recorrido, que se van encendiendo al ritmo del video.
+     Tres formas según la pantalla:
+       · alta/normal  → video arriba, 4 pasos en fila debajo
+       · angosta      → video arriba, pasos en 2x2
+       · apaisada baja→ video a la izquierda, pasos en lista a la derecha    */
+  #pantalla-tutorial{ align-items:center; text-align:center; gap:clamp(9px,1.8vh,18px); max-width:880px; }
+  #pantalla-tutorial h2{ font-size:clamp(21px,4.6vw,33px); margin-top:6px; }
+  #pantalla-tutorial h2 em{ font-style:italic; color:var(--oro); }
+  .tuto-intro{ font-size:clamp(12.5px,1.6vw,14.5px); margin:7px 0 0; }
+  .tuto-cuerpo{ display:flex; flex-direction:column; align-items:center;
+    gap:clamp(9px,1.8vh,16px); width:100%; }
+
+  /* Marco del video (el mp4 es apaisado, 752x416). Se limita también por ALTO
+     para que en pantallas bajitas los pasos y el botón nunca queden fuera. */
+  .tuto-video{ position:relative; width:100%; aspect-ratio:752 / 416; margin:0 auto;
+    max-width:min(100%, 700px, calc(40vh * 752 / 416));
+    max-width:min(100%, 700px, calc(40dvh * 752 / 416));
+    border-radius:clamp(14px,2.4vw,22px); overflow:hidden; background:#07072e;
+    border:1px solid rgba(235,200,120,.3);
+    box-shadow:0 30px 70px -34px rgba(0,0,0,.95), 0 0 42px -18px rgba(235,200,120,.35); }
+  .tuto-video video{ width:100%; height:100%; object-fit:cover; display:block; }
+
+  /* Barra de avance del video, pegada al borde inferior del marco. */
+  .tuto-barra{ position:absolute; left:0; right:0; bottom:0; height:4px; z-index:2; background:rgba(255,255,255,.14); }
+  .tuto-barra i{ display:block; height:100%; width:0%; border-radius:0 3px 3px 0;
+    background:linear-gradient(90deg, var(--oro), var(--oro-suave));
+    box-shadow:0 0 10px rgba(235,200,120,.85); transition:width .18s linear; }
+
+  /* Aviso si el video no está o no se puede reproducir: el tutorial NO se rompe,
+     se queda con los pasos escritos. */
+  .tuto-sinvideo{ position:absolute; inset:0; display:none; place-items:center; padding:20px;
+    font-size:14px; line-height:1.6; color:var(--texto-mute); }
+  .tuto-video.fallo{ aspect-ratio:auto; min-height:112px; }
+  .tuto-video.fallo video, .tuto-video.fallo .tuto-barra{ display:none; }
+  .tuto-video.fallo .tuto-sinvideo{ display:grid; position:static; }
+
+  /* Los 4 pasos del recorrido. */
+  .tuto-pasos{ display:grid; grid-template-columns:repeat(4,1fr); gap:9px; width:100%; }
+  .tuto-paso{ display:flex; flex-direction:column; align-items:center; gap:6px; text-align:center;
+    background:rgba(255,255,255,.05); border:1.5px solid var(--card-borde); border-radius:16px;
+    padding:clamp(9px,1.4vh,14px) 8px; min-width:0;
+    transition:background .3s, border-color .3s, box-shadow .3s, transform .3s; }
+  .tuto-paso .n{ flex:none; width:24px; height:24px; border-radius:50%; display:grid; place-items:center;
+    font-size:12.5px; font-weight:700; color:var(--oro); background:rgba(235,200,120,.12);
+    border:1px solid rgba(235,200,120,.42); transition:all .3s; }
+  .tuto-paso .ti{ flex:none; font-size:clamp(20px,3.4vw,26px); line-height:1; }
+  .tuto-paso .txt{ display:flex; flex-direction:column; gap:3px; min-width:0; }
+  .tuto-paso b{ font-size:clamp(12.5px,1.7vw,13.5px); font-weight:600; color:var(--texto); line-height:1.25;
+    text-wrap:balance; }
+  .tuto-paso small{ font-size:clamp(10.5px,1.4vw,11.5px); line-height:1.4; color:var(--texto-mute); }
+  .tuto-paso.activo{ border-color:transparent; transform:translateY(-3px);
+    background:linear-gradient(135deg, rgba(33,33,222,.92), rgba(91,91,255,.92));
+    box-shadow:0 13px 30px -13px rgba(33,33,222,.95); }
+  .tuto-paso.activo b{ color:#fff; }
+  .tuto-paso.activo small{ color:rgba(255,255,255,.88); }
+  .tuto-paso.activo .n{ color:#3a2c05; background:var(--oro-suave); border-color:transparent;
+    box-shadow:0 0 14px -2px rgba(235,200,120,.8); }
+
+  .tuto-botones{ display:flex; gap:10px; width:100%; max-width:520px; margin:0 auto; }
+  #btn-tuto-comenzar{ min-width:0; }
+  /* El ↺ gira al pulsarlo, igual que el de "Nueva sesión". */
+  #btn-tuto-repetir .giro{ display:inline-block; transition:transform .55s cubic-bezier(.32,1.35,.4,1); }
+  #btn-tuto-repetir:hover .giro, #btn-tuto-repetir:active .giro{ transform:rotate(-360deg); }
+
+  /* Botón "cómo funciona" de la portada: discreto, para quien quiera repasarlo. */
+  #btn-ver-tutorial{ font-size:14.5px; padding:13px 20px; }
+
+  /* --- Kiosco vertical (pantalla alta y ancha): se aprovecha el espacio --- */
+  @media (min-height:1100px) and (min-width:900px){
+    #pantalla-tutorial{ gap:22px; }
+    .tuto-video{ max-width:min(100%, 860px, calc(40vh * 752 / 416));
+                 max-width:min(100%, 860px, calc(40dvh * 752 / 416)); }
+    .tuto-paso{ padding:17px 10px; }
+    .tuto-paso b{ font-size:15px; }
+    .tuto-paso small{ font-size:12.5px; }
+  }
+  /* --- Pantalla angosta: los pasos pasan a 2x2 --- */
+  @media (max-width:620px){
+    .tuto-pasos{ grid-template-columns:repeat(2,1fr); gap:8px; }
+  }
+  /* --- Muy angosta: que el botón principal no parta la frase --- */
+  @media (max-width:400px){
+    #btn-tuto-comenzar{ font-size:15px; padding:15px 12px; }
+    #btn-tuto-repetir{ padding:15px 17px !important; }
+  }
+  /* --- Pantalla bajita: se comprime todo lo prescindible --- */
+  @media (max-height:620px){
+    #pantalla-tutorial{ gap:8px; }
+    .tuto-intro{ display:none; }
+    .tuto-video{ max-width:min(100%, 700px, calc(36vh * 752 / 416));
+                 max-width:min(100%, 700px, calc(36dvh * 752 / 416)); }
+    .tuto-paso small{ display:none; }
+    #pantalla-tutorial .nota{ display:none; }
+  }
+  /* --- Apaisada y baja (tablets/monitores horizontales): video al lado de los
+         pasos, en lista. Así no hay que hacer scroll para ver el botón. --- */
+  @media (orientation:landscape) and (min-width:700px) and (max-height:820px){
+    #pantalla-tutorial{ max-width:1060px; gap:clamp(8px,1.6vh,14px); }
+    .tuto-cuerpo{ display:grid; grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);
+      align-items:center; gap:clamp(14px,2vw,22px); }
+    .tuto-video{ max-width:100%; }
+    .tuto-pasos{ grid-template-columns:1fr; gap:clamp(6px,1.1vh,10px); }
+    .tuto-paso{ flex-direction:row; align-items:center; text-align:left; gap:11px;
+      padding:clamp(8px,1.3vh,12px) 13px; }
+    .tuto-paso .ti{ font-size:22px; }
+    .tuto-paso b{ font-size:13.5px; }
+    .tuto-paso small{ display:block; font-size:11.5px; }
+  }
+  /* En apaisada muy baja (p. ej. 1024x600) también se recortan los textos largos */
+  @media (orientation:landscape) and (min-width:700px) and (max-height:560px){
+    .tuto-paso small{ display:none; }
+    .tuto-paso{ padding:8px 12px; }
+  }
+
   /* ---------- Modos ---------- */
   .modos{ display:grid; grid-template-columns:repeat(2,1fr); gap:12px; width:100%; max-width:420px; }
   .modos button{ display:flex; flex-direction:column; align-items:center; gap:8px; text-align:center;
@@ -304,6 +422,9 @@
     box-shadow:0 12px 34px -16px #000; pointer-events:none;
     opacity:0; visibility:hidden; transition:opacity .5s ease, visibility .5s ease; }
   #pie-version.visible{ opacity:1; visibility:visible; }
+  /* Mientras se ve el instructivo el aviso NO se asoma: es fixed y en pantallas
+     bajitas se pondría justo encima del botón "Ya entendí, comenzar". */
+  body:has(#pantalla-tutorial.activo) #pie-version{ opacity:0 !important; visibility:hidden !important; }
   #pie-version .pie-v{ color:var(--oro-suave); font-weight:600; white-space:nowrap; }
   #pie-version .pie-sep{ opacity:.45; }
 
@@ -337,10 +458,12 @@
   #estado-analisis{ font-size:16px; min-height:24px; color:var(--texto-mute); transition:opacity .3s; }
 
   /* ---------- Modales (disclaimer / recibir) ---------- */
-  #modal-disclaimer, #modal-recibir, #modal-reintentar{ position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; padding:20px;
+  #modal-disclaimer, #modal-recibir, #modal-reintentar, #modal-fin{ position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; padding:20px;
     overflow-y:auto; -webkit-overflow-scrolling:touch;
     background:rgba(4,4,28,.72); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); }
-  #modal-disclaimer.activo, #modal-recibir.activo, #modal-reintentar.activo{ display:flex; animation:fade .35s ease; }
+  #modal-disclaimer.activo, #modal-recibir.activo, #modal-reintentar.activo, #modal-fin.activo{ display:flex; animation:fade .35s ease; }
+  /* El aviso de cierre manda: va por encima de cualquier otro modal. */
+  #modal-fin{ z-index:60; }
   /* margin:auto centra la tarjeta; si es más alta que el celular, se alinea arriba y el modal hace scroll. */
   .modal-card{ max-width:460px; width:100%; margin:auto; padding:26px 24px; text-align:center; }
   .sello{ width:62px; height:62px; margin:0 auto 14px; border-radius:50%; display:grid; place-items:center; font-size:30px;
@@ -352,6 +475,24 @@
     font-weight:600; font-size:16px; cursor:pointer; box-shadow:0 10px 26px -12px rgba(0,0,0,.6); transition:transform .15s; margin-top:6px; }
   .btn-google:active{ transform:translateY(2px); }
   .recibir-estado{ font-size:14px; color:var(--oro-suave); min-height:20px; margin:12px 0 4px; line-height:1.5; }
+
+  /* ---------- Cierre de sesión: aviso + cuenta regresiva ---------- */
+  #modal-fin .sello{ animation:finPulso 2.2s ease-in-out infinite; }
+  @keyframes finPulso{ 0%,100%{ box-shadow:0 0 0 0 rgba(235,200,120,.38) } 50%{ box-shadow:0 0 0 15px rgba(235,200,120,0) } }
+  .fin-anillo{ position:relative; width:132px; height:132px; margin:14px auto 12px; }
+  .fin-anillo svg{ width:100%; height:100%; transform:rotate(-90deg); display:block; }
+  .fin-anillo .pista{ fill:none; stroke:rgba(255,255,255,.13); stroke-width:7; }
+  .fin-anillo .arco{ fill:none; stroke:var(--oro); stroke-width:7; stroke-linecap:round;
+    filter:drop-shadow(0 0 9px rgba(235,200,120,.6)); transition:stroke-dashoffset .25s linear; }
+  .fin-num{ position:absolute; inset:0; display:grid; place-items:center;
+    font-family:var(--display); font-weight:700; font-size:47px; color:var(--oro-suave);
+    text-shadow:0 0 22px rgba(235,200,120,.45); }
+  .fin-num.tic{ animation:finTic .5s ease; }
+  @keyframes finTic{ 0%{transform:scale(1)} 35%{transform:scale(1.15)} 100%{transform:scale(1)} }
+  .fin-botones{ display:flex; flex-direction:column; gap:10px; margin-top:18px; }
+  /* Mismo gesto que el botón "Nueva sesión" de la lectura: el ↺ gira al pulsarlo. */
+  #btn-fin-ahora .giro{ display:inline-block; transition:transform .55s cubic-bezier(.32,1.35,.4,1); }
+  #btn-fin-ahora:hover .giro, #btn-fin-ahora:active .giro{ transform:rotate(-360deg); }
 
   /* ---------- Resultado (mano dibujada + líneas) ---------- */
   /* La lectura puede ensancharse para repartir las tarjetas alrededor del diagrama. */
@@ -406,7 +547,36 @@
   .bloque p{ margin:0; font-size:15.5px; line-height:1.62; color:#ddddf5; }
   .bloque .obs{ margin:0 0 9px; font-size:13.5px; font-style:italic; color:var(--texto-mute); line-height:1.5; }
   .res-cierre{ text-align:center; font-style:italic; color:var(--oro-suave); font-size:15.5px; line-height:1.6; padding:4px 8px; }
-  .res-actions{ display:flex; gap:12px; }
+  .res-actions{ display:flex; gap:12px; align-items:stretch; }
+
+  /* ---------- Botón "Nueva sesión" ----------
+     Acción secundaria pero visible: no compite con el dorado macizo del CTA de
+     WhatsApp, pero tampoco se pierde. Cristal con filo dorado, ↺ en su medallón
+     (gira al pulsarlo) y un destello discreto que lo recorre cada pocos segundos. */
+  .btn-sesion{ position:relative; overflow:hidden; appearance:none; cursor:pointer; flex:none;
+    display:inline-flex; align-items:center; justify-content:center; gap:10px; white-space:nowrap;
+    font-family:var(--cuerpo); font-weight:600; font-size:15px; color:var(--oro-suave);
+    padding:14px 20px; border-radius:16px; border:1px solid rgba(235,200,120,.4);
+    background:linear-gradient(135deg, rgba(235,200,120,.14), rgba(235,200,120,.035));
+    box-shadow:0 12px 30px -18px rgba(235,200,120,.8), inset 0 1px 0 rgba(255,255,255,.13);
+    transition:transform .15s ease, box-shadow .25s ease, border-color .25s ease, color .25s ease; }
+  .btn-sesion .ico{ display:grid; place-items:center; width:27px; height:27px; flex:none;
+    border-radius:50%; font-size:16px; line-height:1; color:var(--oro);
+    background:rgba(235,200,120,.17); border:1px solid rgba(235,200,120,.45);
+    transition:transform .55s cubic-bezier(.32,1.35,.4,1); }
+  .btn-sesion:hover{ color:#fff; border-color:rgba(235,200,120,.85);
+    box-shadow:0 16px 34px -16px rgba(235,200,120,.95), inset 0 1px 0 rgba(255,255,255,.2); }
+  .btn-sesion:hover .ico, .btn-sesion:active .ico{ transform:rotate(-360deg); }
+  .btn-sesion:active{ transform:translateY(2px) scale(.99); }
+  .btn-sesion::after{ content:''; position:absolute; top:0; bottom:0; left:-45%; width:38%; pointer-events:none;
+    background:linear-gradient(100deg, transparent, rgba(255,255,255,.17), transparent);
+    animation:sesionBrillo 5.5s ease-in-out infinite; }
+  @keyframes sesionBrillo{ 0%,72%{ transform:translateX(0) skewX(-18deg) } 88%,100%{ transform:translateX(430%) skewX(-18deg) } }
+  /* El ↺ de la cabecera también se lee como "reiniciar": filo dorado y giro al pulsar. */
+  #btn-reiniciar{ color:var(--oro-suave); border-color:rgba(235,200,120,.38);
+    transition:transform .5s cubic-bezier(.32,1.35,.4,1), color .2s, border-color .2s; }
+  #btn-reiniciar:hover{ color:var(--oro); border-color:rgba(235,200,120,.75); }
+  #btn-reiniciar:active{ transform:rotate(-360deg); }
 
   /* Pista + tarjetas de descripción por línea (bajo el croquis) */
   .res-pista{ text-align:center; font-size:12.5px; color:var(--texto-mute); margin:0; }
@@ -448,9 +618,14 @@
   .btn-wa:active{ transform:translateY(2px); }
 
   /* Responsive */
+  /* En móvil los dos botones se apilan: primero el CTA de WhatsApp, debajo "Nueva sesión". */
+  @media (max-width:520px){
+    .res-actions{ flex-direction:column; }
+    .btn-sesion{ width:100%; order:2; }
+    #btn-recibir2{ order:1; }
+  }
   @media (max-width:380px){
     .linea-card{ padding:12px 13px; } .linea-card .lc-tit{ font-size:16px; } .linea-card .lc-txt{ font-size:14px; }
-    .res-actions{ flex-direction:column; }
     .res-head .icon-btn{ width:38px; height:38px; font-size:16px; }
   }
 
@@ -583,6 +758,56 @@
     <audio id="intro-audio" src="mp3/yodguard-healing-magic-5-378667.mp3" preload="auto"></audio>
   </section>
 
+  <!-- ============ TUTORIAL (cómo usar la máquina) ============
+       Se muestra a TODA persona nada más entrar (portada → tutorial → home).
+       El video no tiene audio: la explicación va en los 4 pasos de abajo, que
+       se encienden solos siguiendo el avance del video. -->
+  <section class="screen scroll" id="pantalla-tutorial">
+    <div>
+      <div class="marca">Cómo funciona</div>
+      <h2>Así se usa la <em>máquina</em></h2>
+      <p class="mute tuto-intro">Mira estos 15 segundos y ya sabrás todo.</p>
+    </div>
+
+    <div class="tuto-cuerpo">
+      <div class="tuto-video" id="tuto-marco">
+        <video id="tuto-video" src="video/tutorial-maquina.mp4"
+               muted playsinline loop preload="auto" disablepictureinpicture
+               aria-label="Video: cómo usar la máquina de quiromancia"></video>
+        <div class="tuto-barra" aria-hidden="true"><i id="tuto-progreso"></i></div>
+        <div class="tuto-sinvideo">
+          <span>✋ Sigue los cuatro pasos:<br>son todo lo que necesitas.</span>
+        </div>
+      </div>
+
+      <div class="tuto-pasos" id="tuto-pasos">
+        <div class="tuto-paso" data-paso="0">
+          <span class="n">1</span><span class="ti" aria-hidden="true">✍️</span>
+          <span class="txt"><b>Cuéntanos de ti</b><small>Tu nombre, correo y celular en la pantalla.</small></span>
+        </div>
+        <div class="tuto-paso" data-paso="1">
+          <span class="n">2</span><span class="ti" aria-hidden="true">🖐️</span>
+          <span class="txt"><b>Apoya tu palma</b><small>Brazo en la base y mano abierta en el soporte.</small></span>
+        </div>
+        <div class="tuto-paso" data-paso="2">
+          <span class="n">3</span><span class="ti" aria-hidden="true">✨</span>
+          <span class="txt"><b>Elige tu tema</b><small>Amor, dinero, salud… lo que quieras saber.</small></span>
+        </div>
+        <div class="tuto-paso" data-paso="3">
+          <span class="n">4</span><span class="ti" aria-hidden="true">🔮</span>
+          <span class="txt"><b>Recibe tu lectura</b><small>La escuchas aquí y te llega al WhatsApp.</small></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="tuto-botones">
+      <button class="btn fantasma" id="btn-tuto-repetir" style="width:auto; padding:16px 22px"
+              title="Ver el video otra vez" aria-label="Ver el video otra vez"><span class="giro" aria-hidden="true">↺</span></button>
+      <button class="btn oro" id="btn-tuto-comenzar">Ya entendí, comenzar ✦</button>
+    </div>
+    <p class="nota">La foto se toma sola: solo tienes que mantener la mano quieta.</p>
+  </section>
+
   <!-- ============ HOME (index) ============ -->
   <section class="screen scroll" id="pantalla-home">
     <svg class="palma-hero" viewBox="0 0 120 120" aria-hidden="true">
@@ -596,8 +821,9 @@
     </div>
     <p class="sub mute">Capturaremos la palma de tu mano para comenzar tu lectura.</p>
 
-    <div style="width:100%; max-width:440px; margin-top:4px">
+    <div style="width:100%; max-width:440px; margin-top:4px; display:flex; flex-direction:column; gap:10px">
       <button class="btn oro" id="btn-tomar">📷 Tomar la foto de mi mano</button>
+      <button class="btn fantasma" id="btn-ver-tutorial">▶ Ver otra vez cómo funciona</button>
     </div>
     <p class="nota">Desarrollado por la casa de software Divergency IA</p>
   </section>
@@ -740,7 +966,7 @@
       </div>
       <button class="icon-btn on" id="btn-tts" title="Leer en voz alta">🔊</button>
       <button class="icon-btn" id="btn-recibir" title="Recibir mi predicción por WhatsApp">📲</button>
-      <button class="icon-btn" id="btn-reiniciar" title="Nueva lectura">↺</button>
+      <button class="icon-btn" id="btn-reiniciar" title="Nueva sesión (borra estos datos y vuelve al inicio)">↺</button>
     </div>
 
     <div class="res-scroll">
@@ -760,7 +986,9 @@
     </div>
 
     <div class="res-actions">
-      <button class="btn fantasma" id="btn-reiniciar2">↺ Nueva</button>
+      <button class="btn-sesion" id="btn-reiniciar2" title="Borra estos datos y deja la app lista para la siguiente persona">
+        <span class="ico" aria-hidden="true">↺</span><span>Nueva sesión</span>
+      </button>
       <button class="btn oro" id="btn-recibir2">📲 Recibir por WhatsApp</button>
     </div>
     <audio id="bg-audio" src="mp3/dragon.mp3" loop preload="auto"></audio>
@@ -771,7 +999,7 @@
 <!-- ============ PIE DE LA APP (versión + medidas de la mano) ============
      Aviso discreto: aparece, se deja leer y se retira solo a los 5 segundos. -->
 <footer id="pie-version" aria-live="polite">
-  <span class="pie-v">Versión 1.3.1</span>
+  <span class="pie-v">Versión 1.3.2</span>
   <span class="pie-sep">·</span>
   <span class="pie-medidas" id="pie-medidas"></span>
 </footer>
@@ -816,6 +1044,29 @@
     <div style="margin-top:20px; display:flex; flex-direction:column; gap:10px">
       <button class="btn oro" id="btn-reintentar-foto">📷 Tomar otra foto</button>
       <button class="btn fantasma" id="btn-reintentar-inicio">Volver al inicio</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MODAL FIN DE SESIÓN (aviso + cuenta regresiva + reinicio) ============
+     Al terminar la lectura la app avisa, cuenta hacia atrás y se reinicia sola,
+     para que quede lista para la siguiente persona sin que nadie la toque. -->
+<div id="modal-fin" role="dialog" aria-modal="true" aria-labelledby="fin-titulo">
+  <div class="glass modal-card">
+    <div class="sello">✨</div>
+    <h2 id="fin-titulo">Tu lectura ha terminado</h2>
+    <p id="fin-msg">Gracias por consultar el oráculo. La sesión se cerrará y la app quedará lista para la siguiente persona.</p>
+    <div class="fin-anillo">
+      <svg viewBox="0 0 132 132" aria-hidden="true">
+        <circle class="pista" cx="66" cy="66" r="58"/>
+        <circle class="arco" id="fin-arco" cx="66" cy="66" r="58" stroke-dasharray="364.42" stroke-dashoffset="0"/>
+      </svg>
+      <div class="fin-num" id="fin-num">8</div>
+    </div>
+    <p class="mute" style="font-size:13.5px; margin:0">Reiniciando en <b id="fin-seg-txt" style="color:var(--oro-suave)">8</b> segundos…</p>
+    <div class="fin-botones">
+      <button class="btn oro" id="btn-fin-ahora"><span class="giro" aria-hidden="true">↺</span> Nueva sesión ahora</button>
+      <button class="btn fantasma" id="btn-fin-seguir">⏸ Seguir viendo mi lectura</button>
     </div>
   </div>
 </div>
@@ -909,16 +1160,21 @@ const estado = {
 };
 
 /* Versión que muestra el pie de la app. */
-const VERSION_APP = '1.3.1';
+const VERSION_APP = '1.4.0';
 
 const $ = (s) => document.querySelector(s);
 const pantallas = {
-  intro:$('#pantalla-intro'), home:$('#pantalla-home'), form:$('#pantalla-form'), camara:$('#pantalla-camara'),
+  intro:$('#pantalla-intro'), tutorial:$('#pantalla-tutorial'), home:$('#pantalla-home'),
+  form:$('#pantalla-form'), camara:$('#pantalla-camara'),
   tema:$('#pantalla-tema'), analisis:$('#pantalla-analisis'), resultado:$('#pantalla-resultado')
 };
 function mostrar(id){
   Object.values(pantallas).forEach(p => p.classList.remove('activo'));
   pantallas[id].classList.add('activo');
+  // El video del tutorial solo corre mientras se está viendo: al cambiar de
+  // pantalla se pausa siempre, venga de donde venga el cambio.
+  if(id !== 'tutorial') tutorialPausar();
+  else ocultarPie();   // el aviso fijo de abajo taparía el botón del tutorial
 }
 
 /* ---------- Estrellas ---------- */
@@ -1010,8 +1266,14 @@ const PIE_MS = 5000;
 const PIE_TEXTO_INICIAL = 'tu lectura se calcula con las medidas reales de tu mano';
 let pieTimerOcultar = null, pieTimerAparecer = null;
 
+function ocultarPie(){
+  const pie = $('#pie-version'); if(pie) pie.classList.remove('visible');
+}
 function mostrarPie(detalle){
   const pie = $('#pie-version'); if(!pie) return;
+  // Durante el instructivo no se asoma: en un móvil pequeño se pondría encima
+  // del botón "Ya entendí, comenzar".
+  if(pantallas.tutorial && pantallas.tutorial.classList.contains('activo')) return;
   pie.querySelector('.pie-v').textContent = 'Versión ' + VERSION_APP;
   $('#pie-medidas').textContent = detalle || PIE_TEXTO_INICIAL;
   clearTimeout(pieTimerOcultar); clearTimeout(pieTimerAparecer);
@@ -1320,7 +1582,7 @@ $('#btn-reintentar-foto').addEventListener('click', () => {
 });
 $('#btn-reintentar-inicio').addEventListener('click', () => {
   $('#modal-reintentar').classList.remove('activo');
-  nuevaLectura();
+  reiniciarSesion();
 });
 
 /* ====================== DISCLAIMER → RESULTADO ====================== */
@@ -1332,9 +1594,10 @@ $('#btn-aceptar').addEventListener('click', () => {
   estado.recibirOfrecido = false;
   if(!(estado.lectura && estado.lectura.error)){
     const txt = compilarPrediccion();
+    const sid = _sesionId;   // si la sesión se reinicia antes, este temporizador ya no aplica
     hablar(txt, ofrecerRecibir);   // si la voz está activa, ofrece WhatsApp al TERMINAR de leerla (~1.5 min)
     // Respaldo: si no hay voz (o no dispara onended), ofrece WhatsApp tras la lectura.
-    setTimeout(ofrecerRecibir, estado.tts ? 110000 : 90000);
+    setTimeout(() => { if(sid === _sesionId) ofrecerRecibir(); }, estado.tts ? 110000 : 90000);
   }
 });
 
@@ -1344,6 +1607,7 @@ function ofrecerRecibir(){
   if(!pantallas.resultado.classList.contains('activo')) return;
   estado.recibirOfrecido = true;
   abrirRecibir();
+  armarInactividad();   // si nadie responde el ofrecimiento, la sesión se cierra sola
 }
 
 // Música de fondo suave (no compite con la voz del oráculo).
@@ -1733,16 +1997,155 @@ $('#res-canvas').addEventListener('click', (e) => {
   for(const b of _boxesHit){ if(x>=b.x && x<=b.x+b.w && y>=b.y && y<=b.y+b.h){ resaltarCard(b.idx); return; } }
 });
 
-/* ====================== NUEVA LECTURA ====================== */
-function nuevaLectura(){
+/* ====================== NUEVA SESIÓN ======================
+   Los dos botones ↺ de la lectura cierran la sesión por completo: borran los
+   datos de quien acaba de leer y devuelven la app a la portada. */
+$('#btn-reiniciar').addEventListener('click', reiniciarSesion);
+$('#btn-reiniciar2').addEventListener('click', reiniciarSesion);
+
+/* ====================== CIERRE DE SESIÓN AUTOMÁTICO ======================
+   Antes la app se quedaba detenida en la pantalla de resultado después de
+   enviar la predicción por WhatsApp. Ahora, al terminar, avisa con una
+   campanita, muestra una cuenta regresiva y se reinicia sola: borra los datos
+   de la persona anterior y vuelve a la portada, lista para la siguiente. */
+const CIERRE_SEG     = 8;       // segundos de cuenta regresiva antes de reiniciar (reinicio rápido)
+const INACTIVIDAD_MS = 30000;   // si nadie toca la pantalla tras ofrecer el envío, también cierra
+const ARCO_LARGO     = 364.42;  // perímetro del anillo del contador (2·π·58)
+
+let _sesionId = 0;              // identifica la sesión actual (invalida temporizadores viejos)
+let _cierreFin = 0, _cierreTimer = null, _inactTimer = null, _ultimoNum = -1;
+
+// Campanita de aviso. Se sintetiza en el navegador (no hace falta ningún archivo).
+function tinTin(){
+  try{
+    const AC = window.AudioContext || window.webkitAudioContext; if(!AC) return;
+    const ac = new AC();
+    [880, 1320].forEach((frec, i) => {
+      const osc = ac.createOscillator(), vol = ac.createGain();
+      osc.type = 'sine'; osc.frequency.value = frec;
+      const t0 = ac.currentTime + i*0.18;
+      vol.gain.setValueAtTime(0.0001, t0);
+      vol.gain.exponentialRampToValueAtTime(0.2, t0 + 0.04);
+      vol.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.9);
+      osc.connect(vol); vol.connect(ac.destination);
+      osc.start(t0); osc.stop(t0 + 1);
+    });
+    setTimeout(() => { try{ ac.close(); }catch(e){} }, 1800);
+  }catch(e){}
+}
+
+// Pinta el número y el anillo. El tiempo se calcula con el reloj (no contando
+// ticks) para que siga siendo exacto aunque el navegador frene los temporizadores
+// mientras la persona está en WhatsApp.
+function pintarCierre(){
+  const restante = Math.max(0, _cierreFin - Date.now());
+  const seg = Math.ceil(restante / 1000);
+  if(seg !== _ultimoNum){
+    _ultimoNum = seg;
+    const n = $('#fin-num'), t = $('#fin-seg-txt');
+    if(n){ n.textContent = seg; n.classList.remove('tic'); void n.offsetWidth; n.classList.add('tic'); }
+    if(t) t.textContent = seg;
+  }
+  const arco = $('#fin-arco');
+  if(arco) arco.style.strokeDashoffset = ARCO_LARGO * (1 - restante/(CIERRE_SEG*1000));
+  if(restante <= 0) reiniciarSesion();
+}
+
+// Muestra el aviso de cierre y arranca la cuenta regresiva.
+function iniciarCierre(titulo, mensaje){
+  if($('#modal-fin').classList.contains('activo')) return;   // ya está contando
+  cancelarInactividad();
+  $('#modal-recibir').classList.remove('activo');
+  if(titulo)  $('#fin-titulo').textContent = titulo;
+  if(mensaje) $('#fin-msg').textContent    = mensaje;
+  _cierreFin = Date.now() + CIERRE_SEG*1000; _ultimoNum = -1;
+  $('#modal-fin').classList.add('activo');
+  tinTin();
+  try{ if(navigator.vibrate) navigator.vibrate([90,60,90]); }catch(e){}
+  pintarCierre();
+  clearInterval(_cierreTimer);
+  _cierreTimer = setInterval(pintarCierre, 250);
+}
+
+// Detiene la cuenta regresiva y cierra el aviso (la lectura sigue en pantalla).
+function cancelarCierre(){
+  clearInterval(_cierreTimer); _cierreTimer = null; _cierreFin = 0; _ultimoNum = -1;
+  $('#modal-fin').classList.remove('activo');
+}
+
+/* ---------- Vigilancia de inactividad ----------
+   Si tras ofrecer el envío nadie vuelve a tocar la pantalla, la sesión también
+   se cierra sola: así el equipo nunca queda "trabado" en la lectura anterior. */
+function armarInactividad(){
+  cancelarInactividad();
+  _inactTimer = setTimeout(() => {
+    _inactTimer = null;
+    if(!pantallas.resultado.classList.contains('activo')) return;
+    iniciarCierre('¿Sigues ahí?', 'No detectamos actividad. Cerraremos la sesión para dejar la app lista para la siguiente persona.');
+  }, INACTIVIDAD_MS);
+}
+function cancelarInactividad(){ clearTimeout(_inactTimer); _inactTimer = null; }
+
+// Cualquier toque en la lectura reinicia la vigilancia (pero NO la cuenta regresiva).
+['click','touchstart','keydown'].forEach(ev => {
+  document.addEventListener(ev, () => {
+    if(!_inactTimer) return;
+    if(!pantallas.resultado.classList.contains('activo')) return;
+    armarInactividad();
+  }, true);
+});
+
+// Al volver a la app (por ejemplo, después de mandar el WhatsApp), si el tiempo
+// ya se agotó mientras estaba en segundo plano, reinicia de inmediato.
+document.addEventListener('visibilitychange', () => {
+  if(!document.hidden && _cierreFin) pintarCierre();
+});
+
+/* ---------- Reinicio total de la sesión ----------
+   Borra los datos de la persona anterior, apaga voz/música/cámara y vuelve
+   a la portada. El siguiente usuario empieza desde cero. */
+function reiniciarSesion(){
+  _sesionId++;                                   // invalida los temporizadores de la sesión anterior
+  clearInterval(_cierreTimer); _cierreTimer = null; _cierreFin = 0; _ultimoNum = -1;
+  cancelarInactividad();
   detenerVoz();
   fondoMusica(false);
-  _animToken++;   // detiene el bucle del canvas
-  estado.lectura = null; estado.dataUrl = '';
-  mostrar('home');
+  detenerCamara();
+  _animToken++;                                  // corta el dibujo del croquis
+  try{ const ia = $('#intro-audio'); if(ia){ ia.pause(); ia.currentTime = 0; } }catch(e){}
+
+  // Cierra cualquier modal que hubiera quedado abierto
+  ['#modal-fin','#modal-recibir','#modal-disclaimer','#modal-reintentar']
+    .forEach(id => { const m = $(id); if(m) m.classList.remove('activo'); });
+
+  // Datos personales: se borran (nadie ve lo del anterior)
+  estado.nombre=''; estado.correo=''; estado.cel=''; estado.fecha=''; estado.anio='';
+  estado.tema=''; estado.signo=''; estado.mano='derecha';
+  estado.dataUrl=''; estado.lectura=null; estado.landmarks=null;
+  estado.flipManual=false; estado.mirror=false; estado.recibirOfrecido=false;
+  estado.tts = true;
+
+  // Formulario y avisos en blanco
+  ['#in-nombre','#in-correo','#in-cel','#in-fecha'].forEach(id => { const el = $(id); if(el) el.value = ''; });
+  const sg = $('#signo-auto'); if(sg) sg.hidden = true;
+  ['#nota-lecturas','#err-form','#err-camara','#recibir-estado'].forEach(id => { const el = $(id); if(el) el.textContent = ''; });
+  [...$('#seg-mano').children].forEach(b => b.classList.toggle('sel', b.dataset.val === 'derecha'));
+  [...$('#seg-tema').children].forEach(b => b.classList.toggle('sel', b.dataset.val === ''));
+  $('#btn-tts').classList.add('on');
+
+  // El tutorial vuelve al segundo 0 y sin pasos encendidos
+  tutorialReiniciar();
+
+  // Vuelve a la portada ("Tocar para iniciar")
+  introIniciada = false;
+  $('#pantalla-intro').classList.remove('saliendo');
+  const fx = document.getElementById('intro-fx'); if(fx) fx.classList.remove('oculto');
+  const app = document.getElementById('app'); if(app) app.scrollTop = 0;
+  mostrar('intro');
 }
-$('#btn-reiniciar').addEventListener('click', nuevaLectura);
-$('#btn-reiniciar2').addEventListener('click', nuevaLectura);
+
+$('#btn-fin-seguir').addEventListener('click', () => { cancelarCierre(); armarInactividad(); });
+$('#btn-fin-ahora').addEventListener('click', reiniciarSesion);
 
 /* ====================== RECIBIR PREDICCIÓN POR CORREO ====================== */
 function compilarPrediccion(){
@@ -1763,7 +2166,11 @@ function compilarPrediccion(){
 function abrirRecibir(){ $('#recibir-estado').textContent=''; $('#modal-recibir').classList.add('activo'); }
 $('#btn-recibir').addEventListener('click', abrirRecibir);
 $('#btn-recibir2').addEventListener('click', abrirRecibir);
-$('#btn-recibir-cerrar').addEventListener('click', () => $('#modal-recibir').classList.remove('activo'));
+// "Ahora no": deja seguir viendo la lectura, pero queda vigilando la inactividad.
+$('#btn-recibir-cerrar').addEventListener('click', () => {
+  $('#modal-recibir').classList.remove('activo');
+  armarInactividad();
+});
 // Normaliza el celular a formato internacional, sin '+' (Colombia: 10 dígitos que empiezan en 3 → 57…).
 function telWhatsApp(cel){
   const d = (cel || '').replace(/\D/g, '');
@@ -1800,6 +2207,10 @@ $('#btn-whatsapp').addEventListener('click', async () => {
       btn.dataset.enviado = '1';
       btn.innerHTML = '✅ Enviada a tu WhatsApp';
       est.textContent = '✅ Tu lectura fue enviada a tu WhatsApp 🔮';
+      // Ya está enviada: la sesión se cierra sola y el kiosco queda listo para
+      // la siguiente persona (si no, se quedaba parada hasta que alguien la reiniciaba).
+      setTimeout(() => iniciarCierre('¡Listo! Tu lectura ya está en tu WhatsApp 📲',
+        'Revísala con calma. La sesión se cerrará sola y la app quedará lista para la siguiente persona.'), 900);
     } else {
       est.textContent = 'No pudimos enviar tu lectura. Intenta de nuevo.';
       btn.disabled = false; btn.innerHTML = htmlOriginal; btn.dataset.enviando = '0';
@@ -1859,6 +2270,71 @@ function hablarNavegador(texto, alTerminar){
   }catch(e){ if(typeof alTerminar === 'function') alTerminar(); }
 }
 
+/* ====================== TUTORIAL (cómo usar la máquina) ======================
+   Lo primero que ve cualquier persona al entrar: portada → tutorial → home.
+   El video es mudo, así que la explicación va en los 4 pasos, que se van
+   encendiendo solos siguiendo el avance del video. */
+
+// Momento en que se enciende cada paso, como FRACCIÓN del video (0 = principio,
+// 1 = final). Van en fracciones y no en segundos para que sigan cuadrando si
+// algún día se cambia video/tutorial-maquina.mp4 por uno más largo o más corto.
+// Para afinar el ritmo, mueve estos cuatro números.
+const TUTO_MARCAS = [0, 0.28, 0.55, 0.78];
+
+const tutoVideo = $('#tuto-video');
+const tutoMarco = $('#tuto-marco');
+const tutoBarra = $('#tuto-progreso');
+const tutoPasos = [...document.querySelectorAll('.tuto-paso')];
+let tutoPasoActual = -1;
+
+// Mueve la barra de avance y enciende el paso que toca según el avance (0..1).
+function tutoPintar(frac){
+  const f = Math.max(0, Math.min(1, frac || 0));
+  if(tutoBarra) tutoBarra.style.width = (f * 100).toFixed(1) + '%';
+  let i = 0;
+  for(let k = 0; k < TUTO_MARCAS.length; k++) if(f >= TUTO_MARCAS[k]) i = k;
+  if(i === tutoPasoActual) return;
+  tutoPasoActual = i;
+  tutoPasos.forEach((el, k) => el.classList.toggle('activo', k === i));
+}
+
+// Si el archivo no está o el navegador no puede reproducirlo, el tutorial NO se
+// rompe: se oculta el marco del video y quedan los pasos escritos.
+function tutoSinVideo(){
+  if(tutoMarco) tutoMarco.classList.add('fallo');
+  tutoPasoActual = -1; tutoPintar(0);
+}
+
+if(tutoVideo){
+  tutoVideo.addEventListener('timeupdate', () => {
+    const d = tutoVideo.duration;
+    if(d && isFinite(d) && d > 0) tutoPintar(tutoVideo.currentTime / d);
+  });
+  tutoVideo.addEventListener('error', tutoSinVideo);
+}
+
+function tutorialArrancar(){
+  tutoPasoActual = -1; tutoPintar(0);
+  if(!tutoVideo) return;
+  try{
+    tutoVideo.currentTime = 0;
+    const pr = tutoVideo.play();
+    // Sin gesto previo del usuario el navegador puede negarse: se queda en el
+    // primer cuadro y los pasos siguen ahí. No es un error que deba avisarse.
+    if(pr && pr.catch) pr.catch(() => {});
+  }catch(e){}
+}
+function tutorialPausar(){ try{ if(tutoVideo) tutoVideo.pause(); }catch(e){} }
+function tutorialReiniciar(){
+  tutorialPausar();
+  try{ if(tutoVideo) tutoVideo.currentTime = 0; }catch(e){}
+  tutoPasoActual = -1; tutoPintar(0);
+}
+
+$('#btn-tuto-repetir').addEventListener('click', tutorialArrancar);
+$('#btn-tuto-comenzar').addEventListener('click', () => mostrar('home'));
+$('#btn-ver-tutorial').addEventListener('click', () => { mostrar('tutorial'); tutorialArrancar(); });
+
 /* ====================== INTRO (estrella + audio) ====================== */
 let introIniciada = false;
 function entrarApp(){
@@ -1867,7 +2343,7 @@ function entrarApp(){
   try{ audio.volume = 0.7; audio.currentTime = 0; const p = audio.play(); if(p && p.catch) p.catch(()=>{}); }catch(e){}
   $('#pantalla-intro').classList.add('saliendo');
   const fx = document.getElementById('intro-fx'); if(fx) fx.classList.add('oculto');
-  setTimeout(() => { mostrar('home'); desvanecerAudio(audio, 4500); }, 1050);
+  setTimeout(() => { mostrar('tutorial'); tutorialArrancar(); desvanecerAudio(audio, 4500); }, 1050);
 }
 function desvanecerAudio(audio, dur){
   if(!audio) return;

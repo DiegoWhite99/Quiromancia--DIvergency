@@ -1,6 +1,7 @@
 # Quiromancia AI · Divergency
 
-App **web** de quiromancia: intro animada con estrella y audio, elección de oráculo
+App **web** de quiromancia: intro animada con estrella y audio, instructivo en video de cómo se
+usa la máquina, elección de oráculo
 (3 personalidades), formulario con datos del usuario, cámara con tema de escaneo,
 animación de análisis y un **chat** donde el oráculo entrega la lectura (con música de
 fondo) y se le puede preguntar por **voz** o por texto. Al final, el usuario puede
