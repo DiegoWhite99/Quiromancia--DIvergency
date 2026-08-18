@@ -73,6 +73,13 @@ en lugar del contorno de mano anterior. Revisada a 16, 32, 64 y 128 px.
 visitante lo vea desde cero. `mostrar()` pausa el video en cuanto se cambia de pantalla,
 venga el cambio de donde venga.
 
+### Documentación
+
+README rehecho: portada con el icono, capturas reales de la app, diagrama del recorrido,
+tabla de funcionalidades y el aviso de cuál es la versión estable. Se corrigieron cosas que
+habían quedado desactualizadas (ya no hay tres personalidades, ni chat con preguntas por
+voz, ni envío por correo con Google: la entrega es por WhatsApp). Capturas en `docs/img/`.
+
 ### Si hay que tocarlo después
 
 - Cambiar el video → reemplazar `public/video/tutorial-maquina.mp4` con ese mismo nombre.
