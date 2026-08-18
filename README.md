@@ -21,7 +21,7 @@ escucha su lectura y la recibe en su WhatsApp.
 
 <img src="docs/img/hero-tutorial.jpg" width="880" alt="Instructivo de la máquina" />
 
-<sub>Desarrollada por la casa de software <b>Divergency IA</b></sub>
+<sub>Hecho por <b>DiegoWhite99</b> para <b>Divergency</b></sub>
 
 </div>
 
@@ -236,6 +236,6 @@ Lo que se termina en `main` se mergea a `despliegue` cuando toca desplegar.
 
 **Quiromancia AI** · versión estable `1.4.0`
 
-Hecho por **Divergency IA**
+Hecho por **DiegoWhite99** para **Divergency**
 
 </div>

@@ -5,7 +5,7 @@ elección de oráculo (3 modos), formulario con datos del usuario, cámara con t
 escaneo, animación de análisis, y un **chat** donde el oráculo entrega la lectura (con
 música de fondo suave) y se puede preguntar por **voz** (micrófono) o por texto.
 
-> Desarrollada por la casa de software **Divergency IA**.
+> Hecho por **DiegoWhite99** para **Divergency**.
 
 ---
 
